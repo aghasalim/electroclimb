@@ -90,7 +90,23 @@ This is the baseline the reinforcement-learning policy has to beat. It also show
 - Run 1 failed because exploration could lower pad voltage (instant falls), and a −20 fall penalty made rushing on easier 45° walls worthwhile.
 - Run 2 hovers at baseline level and drifts worse. The likely cause is physics, not tuning: on the weakest training walls (55 % grip), three stuck pads give 3 × 15 N × 0.55 × 0.6 ≈ 14.9 N against a 14.3 N weight. That's no margin. A crawl gait must lift a foot, so joint corrections can't save those walls.
 
-**Next RL steps:** give the policy levers that matter physically (pause/hold, choose which foot to lift, press force), restrict training to feasible walls plus a curriculum, use larger evaluation sets for model selection, and move to GPU-parallel simulation (MuJoCo MJX / Isaac Lab) for 100M+ steps.
+### Runs 3–6: hold action, target ≥ 90 % success
+
+Success = no fall and ≥ 10 cm up in 20 s. Test set: 40 hard vertical walls (grip 55–100 %, humidity 80–100 %, random pad drop-outs). Physical ceiling ≈ 95 %: on 2 of the 40 walls three pads cannot hold the robot's weight. [`auto_train.sh`](auto_train.sh) runs the sweep.
+
+| | lr | log-std | steps | Success | Falls | Climbed |
+|---|---|---|---|---|---|---|
+| Baseline crawl gait | | | | 80 % | 15 % | 8.6 cm |
+| Run 3 | 1e-4 | −2.0 | 3M | 82 % | 15 % | 8.3 cm |
+| **Run 4** | 3e-5 | −2.5 | 3M | **82 %** | **12 %** | **10.0 cm** |
+| Run 5 | 1e-4 | −1.5 | 4M | 78 % | 20 % | 5.5 cm |
+| Run 6 | 5e-5 | −2.0 | 5M | 82 % | 12 % | 9.1 cm |
+
+All runs score 100 % on holdable walls (grip ≥ 70 %), the same as the baseline.
+
+**The 90 % target was not reached.** The best policy gains 2 points over the baseline. In every run, training performance drops after about 1M steps, so the best checkpoints are early ones that stay close to the baseline. With joint residuals, gait speed and hold, PPO finds no strategy that saves the marginal walls.
+
+**Next RL steps:** give the policy the levers that matter physically: which foot to lift next, press force, and body height (the peel moment). Add a curriculum from holdable to hard walls. Move to GPU-parallel simulation (MuJoCo MJX / Isaac Lab) for 100M+ steps.
 
 ## Physics checks ([`check_physics.py`](check_physics.py))
 
@@ -102,6 +118,6 @@ This is the baseline the reinforcement-learning policy has to beat. It also show
 
 ## Next
 
-1. RL run 3: hold/pause action, feasible-wall curriculum, larger eval sets (see above)
+1. RL: foot-choice, press-force and body-height actions, curriculum, GPU training (see above)
 2. Replace the placeholder adhesion with the test-rig model
 3. Floor-to-wall transitions

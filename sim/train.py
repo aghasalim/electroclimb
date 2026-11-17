@@ -4,7 +4,7 @@
     ../.venv/bin/python train.py --steps 2000000       # CPU-only, parallel envs
     ../.venv/bin/python train.py --eval runs/best/best_model.zip
 
-Training walls: tilt 75..90 deg, grip 55..100 %, humidity 80..100 %, random pad drop-outs.
+Training walls: tilt 75..90 deg, HARD walls: grip 55..100 %, humidity 80..100 %, random pad drop-outs.
 The best model (by evaluation on random vertical walls) is saved to runs/best/.
 Only load models and normalisers that this script produced yourself.
 """
@@ -18,14 +18,17 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 
-from rl_env import ResidualClimbEnv, evaluate
+from rl_env import HARD_WALLS, ResidualClimbEnv, evaluate
 
 RUNS = Path(__file__).resolve().parent / "runs"
 
 
-def make(rank):
+TRAIN_WALLS = HARD_WALLS   # train where the 90 % target is measured
+
+
+def make(rank, seed0=0):
     def _init():
-        return ResidualClimbEnv(seed=rank)
+        return ResidualClimbEnv(seed=seed0 + rank, **TRAIN_WALLS)
     return _init
 
 
@@ -45,10 +48,11 @@ class WallEval(BaseCallback):
         if self.num_timesteps < self.next:
             return True
         self.next += self.every
-        dist, fall = evaluate(self._policy, n=10, seconds=20.0)
-        score = dist - 20.0 * fall
-        self.history.append({"steps": int(self.num_timesteps), "climb_cm": dist, "fall_rate": fall})
-        print(f"[eval] {self.num_timesteps:>9,d} steps: climb {dist:5.1f} cm, falls {fall:.0%}", flush=True)
+        dist, fall, win = evaluate(self._policy, n=20, seconds=20.0, with_success=True, **TRAIN_WALLS)
+        score = win + 0.001 * dist
+        self.history.append({"steps": int(self.num_timesteps), "success": win, "climb_cm": dist, "fall_rate": fall})
+        print(f"[eval] {self.num_timesteps:>9,d} steps: success {win:.0%}, climb {dist:5.1f} cm, falls {fall:.0%}",
+              flush=True)
         if score > self.best:
             self.best = score
             (RUNS / "best").mkdir(parents=True, exist_ok=True)
@@ -58,11 +62,11 @@ class WallEval(BaseCallback):
         return True
 
 
-def train(steps, n_envs, eval_every):
-    venv = VecNormalize(SubprocVecEnv([make(i) for i in range(n_envs)]), norm_reward=True, clip_obs=10.0)
-    model = PPO("MlpPolicy", venv, n_steps=1024, batch_size=4096, n_epochs=5, learning_rate=1e-4,
+def train(steps, n_envs, eval_every, lr=1e-4, log_std=-2.0, seed=0):
+    venv = VecNormalize(SubprocVecEnv([make(i, 100 * seed) for i in range(n_envs)]), norm_reward=True, clip_obs=10.0)
+    model = PPO("MlpPolicy", venv, n_steps=1024, batch_size=4096, n_epochs=5, learning_rate=lr,
                 gamma=0.99, gae_lambda=0.95, clip_range=0.2, ent_coef=0.0, verbose=0,
-                policy_kwargs=dict(net_arch=[128, 128], log_std_init=-2.0), seed=0)
+                policy_kwargs=dict(net_arch=[128, 128], log_std_init=log_std), seed=seed)
     model.learn(total_timesteps=steps, callback=WallEval(venv, every=eval_every))
     model.save(RUNS / "final_model")
 
@@ -79,13 +83,17 @@ if __name__ == "__main__":
     p.add_argument("--steps", type=int, default=2_000_000)
     p.add_argument("--envs", type=int, default=max(2, (os.cpu_count() or 4) - 2))
     p.add_argument("--eval-every", type=int, default=100_000)
+    p.add_argument("--lr", type=float, default=1e-4)
+    p.add_argument("--log-std", type=float, default=-2.0)
+    p.add_argument("--seed", type=int, default=0)
     p.add_argument("--eval", help="evaluate a saved model against the baseline instead of training")
     a = p.parse_args()
     if a.eval:
         pol = load_policy(a.eval)
-        for name, fn in (("baseline gait", None), ("RL policy", pol)):
-            d, f = evaluate(fn, n=30, seconds=20.0, seed0=5000)
-            print(f"{name:14s}: climb {d:5.1f} cm in 20 s, falls {f:.0%}  (30 random vertical walls)")
+        for walls, kw in (("hard walls", HARD_WALLS), ("holdable walls", {})):
+            for name, fn in (("baseline gait", None), ("RL policy", pol)):
+                d, f, w = evaluate(fn, n=40, seconds=20.0, seed0=5000, with_success=True, **kw)
+                print(f"{walls:15s} {name:14s}: SUCCESS {w:.0%}, falls {f:.0%}, climb {d:5.1f} cm  (40 test walls)")
     else:
         RUNS.mkdir(exist_ok=True)
-        train(a.steps, a.envs, a.eval_every)
+        train(a.steps, a.envs, a.eval_every, a.lr, a.log_std, a.seed)
