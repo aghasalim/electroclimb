@@ -77,14 +77,29 @@ class CrawlGait:
         self.cycle = 4 * self.step_s + SHIFT_S
         self.t = 0.0
         self.speed = 1.0                              # gait clock rate (RL can change it)
+        # extra levers for RL (defaults = the hand-written gait)
+        self.lower = 0.0                              # m, all feet toward the body: COM nearer the wall
+        self.press = 0.0                              # m, stance feet push into the wall while one swings
+        self.leg_pref = np.zeros(4)                   # per-leg bias, picks which leg steps next
+        self.cycle_order = []
         self.offset = {f: np.zeros(2) for f in FEET}  # foot x/z offset from home (body frame)
         self.q = {f: STAND[3 * i + 1: 3 * i + 3].copy() for i, f in enumerate(FEET)}
         self.half = (env.jnt_hi - env.jnt_lo) / 2
 
-    def _targets_to_action(self, volts):
+    def _leg(self, k):
+        """Leg for step slot k of this cycle, chosen when the slot starts (default: ORDER)."""
+        while len(self.cycle_order) <= k:
+            left = [f for f in ORDER if f not in self.cycle_order]
+            score = [-ORDER.index(f) + 2.0 * self.leg_pref[FEET.index(f)] for f in left]
+            self.cycle_order.append(left[int(np.argmax(score))])
+        return self.cycle_order[k]
+
+    def _targets_to_action(self, volts, swing=None):
         a = np.concatenate([np.zeros(12), volts])
         for i, f in enumerate(FEET):
-            target = self.ik.home[f][[0, 2]] + self.offset[f]
+            target = self.ik.home[f][[0, 2]] + self.offset[f] + [0.0, self.lower]
+            if swing is not None and f != swing:
+                target[1] -= self.press
             self.q[f] = self.ik.solve(f, target, self.q[f])
             for k, j in enumerate((1, 2)):           # hip, knee
                 a[3 * i + j] = (self.q[f][k] - STAND[3 * i + j]) / self.half[3 * i + j]
@@ -100,7 +115,7 @@ class CrawlGait:
         releasing = t < 4 * self.step_s and (t - k * self.step_s) < PHASES[0][1]
         shifting_start = t >= 4 * self.step_s and t - 4 * self.step_s < self.dt * self.speed
         if releasing or shifting_start:
-            others = [i for i in range(4) if not (releasing and FEET[i] == ORDER[k])]
+            others = [i for i in range(4) if not (releasing and FEET[i] == self._leg(k))]
             missing = [i for i in others if not touching[i]]
             if missing:
                 for i in missing:
@@ -117,11 +132,12 @@ class CrawlGait:
                 self.offset[f] = self.shift_from[f] * (1 - s)
             if s >= 1 and hasattr(self, "shift_from"):
                 del self.shift_from
+                self.cycle_order = []
             return self._targets_to_action(volts)
 
         k = int(t // self.step_s)
         tl = t - k * self.step_s
-        leg = ORDER[k]
+        leg = self._leg(k)
         i = FEET.index(leg)
         start = 0.0
         for name, dur in PHASES:
@@ -142,7 +158,7 @@ class CrawlGait:
                 elif name == "stick":
                     volts[i] = s
             start += dur
-        return self._targets_to_action(volts)
+        return self._targets_to_action(volts, swing=leg)
 
 
 def climb(tilt, seconds=20.0, on_step=None, seed=0):

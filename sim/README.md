@@ -106,7 +106,29 @@ All runs score 100 % on holdable walls (grip ≥ 70 %), the same as the baseline
 
 **The 90 % target was not reached.** The best policy gains 2 points over the baseline. In every run, training performance drops after about 1M steps, so the best checkpoints are early ones that stay close to the baseline. With joint residuals, gait speed and hold, PPO finds no strategy that saves the marginal walls.
 
-**Next RL steps:** give the policy the levers that matter physically: which foot to lift next, press force, and body height (the peel moment). Add a curriculum from holdable to hard walls. Move to GPU-parallel simulation (MuJoCo MJX / Isaac Lab) for 100M+ steps.
+### Runs 7–10: foot choice, press force, body height
+
+The action now also has body height (±1.5 cm toward the wall), stance-foot press (up to 1 cm), and a per-leg preference that picks which foot steps next (19 actions; the observation adds the swinging leg). A zero action is still exactly the baseline gait.
+
+| | lr | log-std | steps | Success | Falls | Climbed |
+|---|---|---|---|---|---|---|
+| Baseline crawl gait | | | | 80 % | 15 % | 8.6 cm |
+| Run 7 | 3e-5 | −2.5 | 3M | 80 % | 18 % | 7.9 cm |
+| Run 8 | 1e-4 | −2.0 | 3M | 82 % | 12 % | 9.1 cm |
+| Run 9 | 1e-4 | −1.5 | 4M | 82 % | 12 % | 8.8 cm |
+| Run 10 | 5e-5 | −2.0 | 5M | 82 % | 12 % | 9.8 cm |
+
+**Still 82 %.** Why the 8 failing baseline walls are hard to save:
+
+| Test walls | Grip | Cause |
+|---|---|---|
+| 0, 4 | 0.50–0.53 | Fall on the first step: three pads can't hold 14.3 N. Unholdable. |
+| 15, 17, 30 | 0.54–0.56 | Fall when the first upper foot lifts (peel moment). Only 2–6 % margin. |
+| 5, 10, 34 | ~0.6 | Random pad drop-outs. Without them they climb 13–16 cm. |
+
+A sweep of fixed lever values made things worse, not better: body lower +1 cm 80 %, −1 cm 48 %; press 0.5 cm 65 %, 1 cm 25 %; gait speed 0.7 72 %. The realistic ceiling on this test set is about 36–38 of 40 (90–95 %), so the gap left is small and lives in the marginal walls.
+
+**Next RL steps:** recover from pad drop-outs (re-press and wait instead of continuing the step), a curriculum from holdable to hard walls, and GPU-parallel simulation (MuJoCo MJX / Isaac Lab) for 100M+ steps. On the hardware side, bigger pads or a lighter robot move walls 0/4/15/17/30 out of the danger zone.
 
 ## Physics checks ([`check_physics.py`](check_physics.py))
 
@@ -118,6 +140,6 @@ All runs score 100 % on holdable walls (grip ≥ 70 %), the same as the baseline
 
 ## Next
 
-1. RL: foot-choice, press-force and body-height actions, curriculum, GPU training (see above)
+1. RL: drop-out recovery, curriculum, GPU training (see above)
 2. Replace the placeholder adhesion with the test-rig model
 3. Floor-to-wall transitions
