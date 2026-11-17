@@ -76,6 +76,7 @@ class CrawlGait:
         self.step_s = sum(p for _, p in PHASES)
         self.cycle = 4 * self.step_s + SHIFT_S
         self.t = 0.0
+        self.speed = 1.0                              # gait clock rate (RL can change it)
         self.offset = {f: np.zeros(2) for f in FEET}  # foot x/z offset from home (body frame)
         self.q = {f: STAND[3 * i + 1: 3 * i + 3].copy() for i, f in enumerate(FEET)}
         self.half = (env.jnt_hi - env.jnt_lo) / 2
@@ -97,7 +98,7 @@ class CrawlGait:
         # reports contact. Until then, freeze the clock and press the missing feet down.
         k = int(t // self.step_s)
         releasing = t < 4 * self.step_s and (t - k * self.step_s) < PHASES[0][1]
-        shifting_start = t >= 4 * self.step_s and t - 4 * self.step_s < self.dt
+        shifting_start = t >= 4 * self.step_s and t - 4 * self.step_s < self.dt * self.speed
         if releasing or shifting_start:
             others = [i for i in range(4) if not (releasing and FEET[i] == ORDER[k])]
             missing = [i for i in others if not touching[i]]
@@ -106,7 +107,7 @@ class CrawlGait:
                     f = FEET[i]
                     self.offset[f][1] = max(self.offset[f][1] - 0.002, -MAX_PRESS)
                 return self._targets_to_action(volts)
-        self.t += self.dt
+        self.t += self.dt * self.speed
 
         if t >= 4 * self.step_s:                      # pull the body up: feet slide back to home
             s = smooth((t - 4 * self.step_s) / SHIFT_S)
