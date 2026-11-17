@@ -11,6 +11,7 @@
 | [`hardware/foot/`](hardware/foot/) | Stage 1 foot design spec, pad footprints (KiCad), previews, BOM |
 | [`tools/gen_electrode.py`](tools/gen_electrode.py) | Parametric electrode pad generator (`--selftest` checks for shorts) |
 | [`tools/driver_calc.py`](tools/driver_calc.py) | HV driver component values + design-rule checks |
+| [`sim/`](sim/) | MuJoCo model, climbing environment, physics checks (stage 2) |
 | [`docs/`](docs/) | Sponsorship sheet |
 
 ## Why
