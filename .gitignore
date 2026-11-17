@@ -1,3 +1,5 @@
 .venv/
 __pycache__/
 runs/
+sim/runs*/
+sim/train.log
