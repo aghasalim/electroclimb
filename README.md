@@ -2,7 +2,13 @@
 
 **An open-source legged robot that climbs concrete, glass and wood using electroadhesive feet, controlled by reinforcement learning, and inspects structures as it goes.**
 
-> Status: stage 1 in progress. The electroadhesive foot design is in [`hardware/foot/`](hardware/foot/).
+> Status: stage 1 (foot hardware) in progress, and the simulated robot already climbs a vertical wall. See [`hardware/foot/`](hardware/foot/) and [`sim/`](sim/).
+
+<p align="center">
+  <img src="media/climb_wall_front.gif" width="300" alt="Simulated ElectroClimb robot climbing a vertical wall, front view">
+  <img src="media/climb_wall_side.gif" width="300" alt="Simulated ElectroClimb robot climbing a vertical wall, side view">
+</p>
+<p align="center"><em>MuJoCo simulation, vertical wall, 2× speed: baseline crawl gait with electroadhesive feet, 18 cm in 20 s without falling. Real physics, not an animation.</em></p>
 
 ## Repository
 
@@ -11,7 +17,8 @@
 | [`hardware/foot/`](hardware/foot/) | Stage 1 foot design spec, pad footprints (KiCad), previews, BOM |
 | [`tools/gen_electrode.py`](tools/gen_electrode.py) | Parametric electrode pad generator (`--selftest` checks for shorts) |
 | [`tools/driver_calc.py`](tools/driver_calc.py) | HV driver component values + design-rule checks |
-| [`sim/`](sim/) | MuJoCo model, climbing environment, physics checks (stage 2) |
+| [`sim/`](sim/) | MuJoCo model, climbing environment, crawl gait, physics checks, media renderer (stage 2) |
+| [`media/`](media/) | Simulation GIFs and images (rendered by `sim/render_media.py`) |
 | [`docs/`](docs/) | Sponsorship sheet |
 
 ## Why

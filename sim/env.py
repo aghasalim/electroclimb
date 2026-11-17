@@ -20,7 +20,7 @@ import numpy as np
 XML = Path(__file__).with_name("electroclimb.xml")
 FEET = ["fl", "fr", "hl", "hr"]
 JOINTS = [f"{f}_{j}" for f in FEET for j in ("abd", "hip", "knee")]
-STAND = np.tile([0.0, 0.0, 0.0], 4)  # joint targets (rad) for the default stance
+STAND = np.tile([0.0, -0.4, 1.0], 4)  # abd, hip, knee (rad): crouched, foot under hip, body ~9 cm off the wall
 
 
 def gravity_for_tilt(tilt_deg):

@@ -1,10 +1,15 @@
-# Simulation (stage 2 skeleton)
+# Simulation (stage 2)
 
-MuJoCo model and climbing environment for ElectroClimb.
+MuJoCo model, climbing environment and a baseline crawl gait for ElectroClimb.
+
+<p align="center"><img src="../media/hero.png" width="320" alt="ElectroClimb robot on a vertical wall in simulation"></p>
 
 ```bash
 uv venv --python 3.12 .venv && uv pip install --python .venv -r sim/requirements.txt
-cd sim && ../.venv/bin/python check_physics.py
+cd sim
+../.venv/bin/python check_physics.py    # holds on the wall with pads on, slides off without
+../.venv/bin/python crawl_gait.py       # baseline gait climbs floor, 45 deg and vertical wall
+../.venv/bin/python render_media.py     # GIFs + hero image -> ../media/
 ```
 
 ## How climbing is simulated
@@ -22,8 +27,9 @@ This gives the training curriculum directly: start on the floor and raise the ti
 
 ## Model ([`electroclimb.xml`](electroclimb.xml))
 
-- 1.46 kg quadruped with 12 servo joints (hip abduction, hip flexion, knee per leg), servo torque limited to 2 Nm
-- 2 passive, spring-loaded ankle joints per foot, so the pad lies flat
+- 1.46 kg quadruped with 12 servo joints (hip abduction, hip flexion, knee per leg). Servos are modelled on SO-101-class STS3215: kp 25, 3 Nm limit.
+- Crouched stance (body ~9 cm off the wall) to keep the **peel moment** small
+- 2 passive, spring-loaded ankle joints per foot. The pads are pre-rotated so the spring holds them **flat** in the stance.
 - **Electroadhesion = MuJoCo `adhesion` actuator** per foot: action 0–1 is pad voltage 0–100 %, gain 15 N max pull
 - IMU: orientation, gyro, accelerometer
 
@@ -36,18 +42,41 @@ This gives the training curriculum directly: start on the floor and raise the ti
 
 The adhesion model is a **placeholder**. It gets replaced by the data-driven model from the stage 1 test rig (voltage × surface × humidity × peel angle).
 
+## Baseline crawl gait ([`crawl_gait.py`](crawl_gait.py))
+
+The gait plans feet in the body frame and converts them to joint angles with inverse kinematics, solved on a copy of the MuJoCo model. One leg at a time:
+
+**release pad → lift → move up 4 cm → come down until the grip sensor reports contact → re-stick**
+
+Then the body pulls itself up on all four pads.
+
+One safety rule made the difference on the wall: **never lift a foot until every other foot reports contact.** Until then, the gait waits and presses the missing foot down.
+
+| Surface | Climbed in 20 s | Fell |
+|---|---|---|
+| Floor (0°) | 20.5 cm | no |
+| Slope (45°) | 19.0 cm | no |
+| **Vertical wall (90°)** | **18.0 cm** | **no** |
+
+This is the baseline the reinforcement-learning policy has to beat. It also shows the real design problems the hardware must solve:
+
+| Problem found in simulation | Fix | What it means for the real robot |
+|---|---|---|
+| Tall body: gravity peels the upper feet off the wall | Crouched stance, body 16 → 9 cm | Keep the centre of mass low |
+| Passive ankle spring held pads tilted, so only the edges stuck | Pads pre-rotated to sit flat in the stance | Foot geometry must keep the pad flat |
+| Swung foot landed short, then the next foot released | Reach until contact + wait for all other feet | Capacitance contact sensing is essential, not optional |
+| Weak surface (40 % grip) cannot hold a vertical wall | n/a, this is physics | Bigger pads or a lighter robot; the policy must avoid weak patches |
+
 ## Physics checks ([`check_physics.py`](check_physics.py))
 
 | Case | Result |
 |---|---|
-| Vertical wall, pads on | holds (0.8 cm creep) ✅ |
+| Vertical wall, pads on | holds (0.1 cm creep) ✅ |
 | Vertical wall, pads off | slides off ✅ |
 | Floor, pads off | stands ✅ |
 
-Extra observation: on a weak surface (40 % grip), the robot slides off a vertical wall but still holds on the ceiling. Pad pull (4 × 6 N) times friction (0.6) is about 14 N of shear, just under its 14.3 N weight, while the ceiling only needs the pull itself to exceed the weight. This is exactly the situation the policy must learn to handle: press harder, use more feet, or avoid weak patches.
-
 ## Next
 
-1. Hand-written crawl gait as a baseline (one foot moves at a time, pads switched off only on the moving foot)
-2. PPO training with the gravity-tilt curriculum (MuJoCo MJX / Isaac Lab for thousands of parallel environments)
-3. Replace the placeholder adhesion with the test-rig model
+1. PPO training with the gravity-tilt curriculum (MuJoCo MJX / Isaac Lab for thousands of parallel environments), starting from the crawl gait
+2. Replace the placeholder adhesion with the test-rig model
+3. Floor-to-wall transitions

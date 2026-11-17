@@ -14,19 +14,24 @@ Mass ~1.5 kg. Dimensions are first guesses, to be replaced by the CAD model.
     <joint damping="0.05" armature="0.005"/>
     <geom friction="0.6 0.02 0.002" condim="4" solref="0.005 1"/>
     <default class="servo">
-      <position kp="8" kv="0.2" forcerange="-2 2"/>
+      <position kp="25" kv="0.5" forcerange="-3 3"/>
     </default>
     <default class="ankle">
-      <joint range="-35 35" damping="0.02" stiffness="0.3"/>
+      <joint range="-20 20" damping="0.05" stiffness="6"/>
     </default>
     <default class="pad">
       <geom type="box" size="0.03 0.025 0.003" mass="0.03" rgba="0.95 0.6 0.15 1" margin="0.004" gap="0.004"/>
     </default>
   </default>
 
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.72 0.72 0.70" rgb2="0.62 0.62 0.60" width="512" height="512"/>
+    <material name="concrete" texture="grid" texrepeat="20 20" reflectance="0"/>
+  </asset>
+
   <worldbody>
     <light pos="0 0 2" dir="0 0 -1"/>
-    <geom name="wall" type="plane" size="3 3 0.1" rgba="0.6 0.6 0.58 1"/>
+    <geom name="wall" type="plane" size="3 3 0.1" material="concrete"/>
 
     <body name="torso" pos="0 0 0.14">
       <freejoint/>
@@ -41,9 +46,9 @@ Mass ~1.5 kg. Dimensions are first guesses, to be replaced by the CAD model.
           <joint name="fl_hip" axis="0 1 0" range="-90 90"/>
           <geom type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
           <body name="fl_shin" pos="0.04 0 -0.07">
-            <joint name="fl_knee" axis="0 1 0" range="-150 0"/>
+            <joint name="fl_knee" axis="0 1 0" range="0 150"/>
             <geom type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
-            <body name="fl_foot" pos="-0.03 0 -0.06">
+            <body name="fl_foot" pos="-0.03 0 -0.06" euler="0 -34.4 0">
               <joint name="fl_ank_x" class="ankle" axis="1 0 0"/>
               <joint name="fl_ank_y" class="ankle" axis="0 1 0"/>
               <geom name="fl_pad" class="pad" pos="0 0 -0.004"/>
@@ -59,9 +64,9 @@ Mass ~1.5 kg. Dimensions are first guesses, to be replaced by the CAD model.
           <joint name="fr_hip" axis="0 1 0" range="-90 90"/>
           <geom type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
           <body name="fr_shin" pos="0.04 0 -0.07">
-            <joint name="fr_knee" axis="0 1 0" range="-150 0"/>
+            <joint name="fr_knee" axis="0 1 0" range="0 150"/>
             <geom type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
-            <body name="fr_foot" pos="-0.03 0 -0.06">
+            <body name="fr_foot" pos="-0.03 0 -0.06" euler="0 -34.4 0">
               <joint name="fr_ank_x" class="ankle" axis="1 0 0"/>
               <joint name="fr_ank_y" class="ankle" axis="0 1 0"/>
               <geom name="fr_pad" class="pad" pos="0 0 -0.004"/>
@@ -77,9 +82,9 @@ Mass ~1.5 kg. Dimensions are first guesses, to be replaced by the CAD model.
           <joint name="hl_hip" axis="0 1 0" range="-90 90"/>
           <geom type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
           <body name="hl_shin" pos="0.04 0 -0.07">
-            <joint name="hl_knee" axis="0 1 0" range="-150 0"/>
+            <joint name="hl_knee" axis="0 1 0" range="0 150"/>
             <geom type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
-            <body name="hl_foot" pos="-0.03 0 -0.06">
+            <body name="hl_foot" pos="-0.03 0 -0.06" euler="0 -34.4 0">
               <joint name="hl_ank_x" class="ankle" axis="1 0 0"/>
               <joint name="hl_ank_y" class="ankle" axis="0 1 0"/>
               <geom name="hl_pad" class="pad" pos="0 0 -0.004"/>
@@ -95,9 +100,9 @@ Mass ~1.5 kg. Dimensions are first guesses, to be replaced by the CAD model.
           <joint name="hr_hip" axis="0 1 0" range="-90 90"/>
           <geom type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
           <body name="hr_shin" pos="0.04 0 -0.07">
-            <joint name="hr_knee" axis="0 1 0" range="-150 0"/>
+            <joint name="hr_knee" axis="0 1 0" range="0 150"/>
             <geom type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
-            <body name="hr_foot" pos="-0.03 0 -0.06">
+            <body name="hr_foot" pos="-0.03 0 -0.06" euler="0 -34.4 0">
               <joint name="hr_ank_x" class="ankle" axis="1 0 0"/>
               <joint name="hr_ank_y" class="ankle" axis="0 1 0"/>
               <geom name="hr_pad" class="pad" pos="0 0 -0.004"/>
