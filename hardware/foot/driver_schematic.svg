@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="1000" height="600" font-family="Helvetica, Arial, sans-serif" font-size="13">
+<rect width="1000" height="600" fill="#ffffff"/>
+<text x="20" y="28" font-size="18" font-weight="bold">ElectroClimb foot HV driver v1 (one per foot)</text>
+<text x="20" y="48" fill="#b00" font-size="12">HIGH VOLTAGE: up to 3 kV. Red = HV nets. Values from tools/driver_calc.py</text>
+<g stroke="#000" stroke-width="1.6" fill="none">
+<!-- XIAO -->
+<rect x="30" y="140" width="130" height="200"/>
+<!-- 5V rail and interlock -->
+<path d="M30 100 H300"/><path d="M300 100 L320 88"/><path d="M325 100 H380 V170"/>
+<!-- RC filter -->
+<path d="M160 190 H200"/><rect x="200" y="182" width="40" height="16"/><path d="M240 190 H380"/>
+<path d="M270 190 V215"/><path d="M258 215 H282 M258 222 H282"/><path d="M270 222 V245 M262 245 H278"/>
+<!-- HV module -->
+<rect x="380" y="150" width="150" height="130"/>
+<path d="M380 250 H360 V300 M352 300 H368"/>
+</g>
+<g stroke="#c00" stroke-width="2" fill="none">
+<!-- HV+ out to R_LIMIT -->
+<path d="M530 175 H580"/><rect x="580" y="167" width="60" height="16"/><path d="M640 175 H740 V215"/>
+<!-- pad capacitor -->
+<path d="M720 215 H760 M720 228 H760"/>
+<!-- bleeder across pad -->
+<path d="M740 175 H850 V185"/><rect x="842" y="185" width="16" height="50"/><path d="M850 235 V255 H740"/>
+<!-- dump relay + R_DUMP -->
+<path d="M800 175 V188"/><path d="M800 188 L815 205"/><path d="M800 210 V222"/><rect x="792" y="222" width="16" height="22"/><path d="M800 244 V255"/>
+<path d="M740 228 V255"/>
+</g>
+<g stroke="#000" stroke-width="1.6" fill="none">
+<!-- pad B to R_SENSE to GND (module return) -->
+<path d="M740 255 V300"/><rect x="732" y="300" width="16" height="44"/><path d="M740 344 V380 M728 380 H752 M733 386 H747 M738 392 H742"/>
+<path d="M530 255 H560 V380 H728"/>
+<!-- sense to ADC -->
+<path d="M740 300 H680 V440 H260"/><rect x="420" y="432" width="40" height="16"/>
+<path d="M330 440 V470 M318 470 H342 M330 470 L322 482 H338 Z"/>
+<path d="M260 440 V300 H160"/>
+<!-- relay coil driver -->
+<path d="M160 230 H230 V520 H805 V470"/><rect x="785" y="440" width="40" height="30"/><path d="M805 440 V260" stroke-dasharray="4 4"/>
+</g>
+<g fill="#000">
+<text x="45" y="165" font-weight="bold">XIAO ESP32-S3</text>
+<text x="45" y="195">PWM: HV set</text>
+<text x="45" y="235">GPIO: release</text>
+<text x="45" y="305">ADC: Q sense</text>
+<text x="40" y="94">+5 V</text>
+<text x="290" y="80">S1 interlock</text>
+<text x="290" y="128" font-size="11">(foot contact + arm switch)</text>
+<text x="196" y="176" font-size="11">R1 10k</text>
+<text x="290" y="222" font-size="11">C1 10 uF</text>
+<text x="390" y="172" font-weight="bold">U1 HV module</text>
+<text x="390" y="190" font-size="11">XP Power AG30P-5</text>
+<text x="390" y="206" font-size="11">0-3 kV, 1 W</text>
+<text x="390" y="230" font-size="11">Vin / Vctrl / GND</text>
+<text x="472" y="268" font-size="11">HV return</text>
+<text x="500" y="168" font-size="11" fill="#c00">HV+</text>
+<text x="574" y="160" font-size="11" fill="#c00">R2 47M (fault limit)</text>
+<text x="660" y="205" font-size="11" fill="#c00">Pad A</text>
+<text x="664" y="245" font-size="11" fill="#c00">Pad B</text>
+<text x="590" y="225" font-size="12" font-weight="bold" fill="#c00">Electrode pad</text>
+<text x="590" y="240" font-size="11" fill="#c00">~0.5-1 nF</text>
+<text x="866" y="205" font-size="11" fill="#c00">R3 1G</text>
+<text x="866" y="220" font-size="11" fill="#c00">safety bleed</text>
+<text x="816" y="196" font-size="11" fill="#c00">K1</text>
+<text x="752" y="238" font-size="11" fill="#c00">R4 1M</text>
+<text x="756" y="320" font-size="11">R5 10k sense</text>
+<text x="756" y="334" font-size="11">(low-voltage side)</text>
+<text x="404" y="425" font-size="11">R6 1k</text>
+<text x="348" y="478" font-size="11">D1 clamp</text>
+<text x="835" y="460" font-size="11">K1 coil</text>
+<text x="835" y="474" font-size="11">HV reed relay</text>
+<text x="835" y="488" font-size="11">(+ driver, flyback)</text>
+<text x="20" y="560" font-size="12">Grip sensing: on each energise, integrate the return current through R5 (ADC, 20 kHz) -> charge Q -> C = Q / V. Contact raises C.</text>
+<text x="20" y="580" font-size="12">Release: K1 shorts the pad through R4 (tau ~1 ms). R3 always bleeds the pad to safe within seconds if anything fails.</text>
+</g>
+</svg>
