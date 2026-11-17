@@ -1,0 +1,128 @@
+<!--
+ElectroClimb v0 simulation model.
+The robot always stands on the plane "wall". Climbing is simulated by rotating gravity
+(env.py): tilt 0 deg = floor, 90 deg = vertical wall (up = +x), 180 deg = ceiling.
+12 actuated joints (hip abduction, hip flexion, knee per leg), 2 passive ankle joints per
+foot so the pad lies flat, and one MuJoCo adhesion actuator per foot pad.
+Mass ~1.5 kg. Dimensions are first guesses, to be replaced by the CAD model.
+-->
+<mujoco model="electroclimb_v0">
+  <compiler angle="degree" autolimits="true"/>
+  <option timestep="0.002" gravity="0 0 -9.81" cone="elliptic" impratio="10"/>
+
+  <default>
+    <joint damping="0.05" armature="0.005"/>
+    <geom friction="0.6 0.02 0.002" condim="4" solref="0.005 1"/>
+    <default class="servo">
+      <position kp="8" kv="0.2" forcerange="-2 2"/>
+    </default>
+    <default class="ankle">
+      <joint range="-35 35" damping="0.02" stiffness="0.3"/>
+    </default>
+    <default class="pad">
+      <geom type="box" size="0.03 0.025 0.003" mass="0.03" rgba="0.95 0.6 0.15 1" margin="0.004" gap="0.004"/>
+    </default>
+  </default>
+
+  <worldbody>
+    <light pos="0 0 2" dir="0 0 -1"/>
+    <geom name="wall" type="plane" size="3 3 0.1" rgba="0.6 0.6 0.58 1"/>
+
+    <body name="torso" pos="0 0 0.14">
+      <freejoint/>
+      <geom type="box" size="0.1 0.06 0.02" mass="0.9" rgba="0.35 0.35 0.35 1"/>
+      <site name="imu"/>
+
+      <!-- leg template: hip at torso corner, abduction (x), flexion (y), knee (y) -->
+      <body name="fl_hip" pos="0.1 0.06 0">
+        <joint name="fl_abd" axis="1 0 0" range="-30 30"/>
+        <geom type="capsule" fromto="0 0 0 0 0.02 0" size="0.012" mass="0.04"/>
+        <body name="fl_thigh" pos="0 0.02 0">
+          <joint name="fl_hip" axis="0 1 0" range="-90 90"/>
+          <geom type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
+          <body name="fl_shin" pos="0.04 0 -0.07">
+            <joint name="fl_knee" axis="0 1 0" range="-150 0"/>
+            <geom type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
+            <body name="fl_foot" pos="-0.03 0 -0.06">
+              <joint name="fl_ank_x" class="ankle" axis="1 0 0"/>
+              <joint name="fl_ank_y" class="ankle" axis="0 1 0"/>
+              <geom name="fl_pad" class="pad" pos="0 0 -0.004"/>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <body name="fr_hip" pos="0.1 -0.06 0">
+        <joint name="fr_abd" axis="1 0 0" range="-30 30"/>
+        <geom type="capsule" fromto="0 0 0 0 -0.02 0" size="0.012" mass="0.04"/>
+        <body name="fr_thigh" pos="0 -0.02 0">
+          <joint name="fr_hip" axis="0 1 0" range="-90 90"/>
+          <geom type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
+          <body name="fr_shin" pos="0.04 0 -0.07">
+            <joint name="fr_knee" axis="0 1 0" range="-150 0"/>
+            <geom type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
+            <body name="fr_foot" pos="-0.03 0 -0.06">
+              <joint name="fr_ank_x" class="ankle" axis="1 0 0"/>
+              <joint name="fr_ank_y" class="ankle" axis="0 1 0"/>
+              <geom name="fr_pad" class="pad" pos="0 0 -0.004"/>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <body name="hl_hip" pos="-0.1 0.06 0">
+        <joint name="hl_abd" axis="1 0 0" range="-30 30"/>
+        <geom type="capsule" fromto="0 0 0 0 0.02 0" size="0.012" mass="0.04"/>
+        <body name="hl_thigh" pos="0 0.02 0">
+          <joint name="hl_hip" axis="0 1 0" range="-90 90"/>
+          <geom type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
+          <body name="hl_shin" pos="0.04 0 -0.07">
+            <joint name="hl_knee" axis="0 1 0" range="-150 0"/>
+            <geom type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
+            <body name="hl_foot" pos="-0.03 0 -0.06">
+              <joint name="hl_ank_x" class="ankle" axis="1 0 0"/>
+              <joint name="hl_ank_y" class="ankle" axis="0 1 0"/>
+              <geom name="hl_pad" class="pad" pos="0 0 -0.004"/>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <body name="hr_hip" pos="-0.1 -0.06 0">
+        <joint name="hr_abd" axis="1 0 0" range="-30 30"/>
+        <geom type="capsule" fromto="0 0 0 0 -0.02 0" size="0.012" mass="0.04"/>
+        <body name="hr_thigh" pos="0 -0.02 0">
+          <joint name="hr_hip" axis="0 1 0" range="-90 90"/>
+          <geom type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
+          <body name="hr_shin" pos="0.04 0 -0.07">
+            <joint name="hr_knee" axis="0 1 0" range="-150 0"/>
+            <geom type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
+            <body name="hr_foot" pos="-0.03 0 -0.06">
+              <joint name="hr_ank_x" class="ankle" axis="1 0 0"/>
+              <joint name="hr_ank_y" class="ankle" axis="0 1 0"/>
+              <geom name="hr_pad" class="pad" pos="0 0 -0.004"/>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <position class="servo" name="fl_abd" joint="fl_abd"/> <position class="servo" name="fl_hip" joint="fl_hip"/> <position class="servo" name="fl_knee" joint="fl_knee"/>
+    <position class="servo" name="fr_abd" joint="fr_abd"/> <position class="servo" name="fr_hip" joint="fr_hip"/> <position class="servo" name="fr_knee" joint="fr_knee"/>
+    <position class="servo" name="hl_abd" joint="hl_abd"/> <position class="servo" name="hl_hip" joint="hl_hip"/> <position class="servo" name="hl_knee" joint="hl_knee"/>
+    <position class="servo" name="hr_abd" joint="hr_abd"/> <position class="servo" name="hr_hip" joint="hr_hip"/> <position class="servo" name="hr_knee" joint="hr_knee"/>
+    <!-- electroadhesion: ctrl 0..1 = pad voltage 0..100 %, gain = max normal pull in N (scaled per episode by env.py) -->
+    <adhesion name="fl_adh" body="fl_foot" ctrlrange="0 1" gain="15"/>
+    <adhesion name="fr_adh" body="fr_foot" ctrlrange="0 1" gain="15"/>
+    <adhesion name="hl_adh" body="hl_foot" ctrlrange="0 1" gain="15"/>
+    <adhesion name="hr_adh" body="hr_foot" ctrlrange="0 1" gain="15"/>
+  </actuator>
+
+  <sensor>
+    <framequat name="imu_quat" objtype="site" objname="imu"/>
+    <gyro name="imu_gyro" site="imu"/>
+    <accelerometer name="imu_acc" site="imu"/>
+  </sensor>
+</mujoco>
