@@ -2,7 +2,15 @@
 
 **An open-source legged robot that climbs concrete, glass and wood using electroadhesive feet, controlled by reinforcement learning, and inspects structures as it goes.**
 
-> Status: design stage. Stage 1 (electroadhesive foot + test rig) starts November 2026.
+> Status: stage 1 in progress. The electroadhesive foot design is in [`hardware/foot/`](hardware/foot/).
+
+## Repository
+
+| Path | What's there |
+|---|---|
+| [`hardware/foot/`](hardware/foot/) | Stage 1 foot design spec, pad footprints (KiCad), previews, BOM |
+| [`tools/gen_electrode.py`](tools/gen_electrode.py) | Parametric electrode pad generator (`--selftest` checks for shorts) |
+| [`docs/`](docs/) | Sponsorship sheet |
 
 ## Why
 
