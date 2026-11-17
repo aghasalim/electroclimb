@@ -1,0 +1,20 @@
+block,item,qty_per_foot,candidate_part,status,notes
+pad,Flex PCB electrode pad 80x60 mm,1,custom (tools/gen_electrode.py),design,"1-layer flex, 18 um Cu, 25 um PI base + 25 um coverlay; order 3 finger/gap variants"
+pad,Compliant backing,1,3D printed TPU 95A or 2-3 mm foam,design,
+pad,HV-rated flex connector or soldered HV wire,2,silicone HV test lead wire rated >=5 kV,verify,
+driver,Proportional DC-HV module 0-3 kV from 5 V,1,"XP Power (EMCO) Q-series or A-series, 3 kV positive",verify,"pick a current-limited, proportional-control model; check output current and size"
+driver,Current-limit resistor 10 MOhm HV,1,HV thick-film resistor >=5 kV rating,verify,
+driver,Bleeder resistor 100 MOhm HV,1,HV thick-film resistor >=5 kV rating,verify,sets release time (tau = R * C_pad)
+driver,HV reed relay (optional fast release),1,"Pickering / Coto HV reed relay, >=3 kV standoff",verify,v1 can skip and rely on the bleeder
+driver,Microcontroller,1,Seeed Studio XIAO ESP32-S3,known,"DAC/PWM for HV setpoint, ADC for sensing, CAN via transceiver"
+driver,RC filter for HV setpoint,1,10 kOhm + 10 uF,known,PWM to 0-5 V control voltage
+sensing,Sense resistor (return path),1,1 kOhm 0.1%,known,low-voltage side only
+sensing,Integrator / charge amplifier op-amp,1,low-bias CMOS op-amp (e.g. MCP6002 class),verify,charge measurement C = Q / V
+sensing,Capacitance-to-digital converter (v2),1,TI FDC2214 or ADI AD7746 class,verify,measured only while HV is off
+sensing,Input protection,2,TVS diode + series resistor,verify,protects sensing side from HV faults
+safety,Interlock switch,1,microswitch on foot + arm switch,known,HV enable only when closed
+safety,HV probe for measurements,1,1000:1 HV probe rated >=5 kV,verify,lab equipment; never use a normal multimeter on HV
+rig,Load cell + amplifier,1,"5 kg load cell + HX711",known,reuses smart-ivc-cage-platform weighing code
+rig,Linear stage,1,lead-screw stage + stepper,verify,pulls pad at set speed / peel angle
+rig,Temperature + humidity sensor,1,SHT31 / SHT4x class,verify,
+rig,Test surfaces,1,"glass, smooth + rough concrete, plywood, painted panel",known,
