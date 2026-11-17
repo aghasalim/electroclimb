@@ -67,6 +67,31 @@ This is the baseline the reinforcement-learning policy has to beat. It also show
 | Swung foot landed short, then the next foot released | Reach until contact + wait for all other feet | Capacitance contact sensing is essential, not optional |
 | Weak surface (40 % grip) cannot hold a vertical wall | n/a, this is physics | Bigger pads or a lighter robot; the policy must avoid weak patches |
 
+## Reinforcement learning ([`rl_env.py`](rl_env.py), [`train.py`](train.py))
+
+**Residual RL:** PPO (Stable-Baselines3) learns corrections on top of the crawl gait (12 joint offsets plus gait speed) instead of learning to climb from scratch. Training walls are randomised: tilt, grip 55–100 %, humidity, and sudden pad drop-outs.
+
+```bash
+../.venv/bin/python train.py --steps 2500000                 # ~20 min on 8 CPU cores
+../.venv/bin/python train.py --eval runs/best/best_model.zip  # vs baseline on 30 random walls
+../.venv/bin/python render_rl.py runs/best/best_model.zip     # side-by-side GIF
+```
+
+**Results so far (30 random vertical walls, 20 s each):**
+
+| | Climbed | Falls |
+|---|---|---|
+| Baseline crawl gait | 9.2 cm | 13 % |
+| RL run 1 (pad voltage in action, tilt 45–90°, fall −20) | −9.6 cm | 40 % |
+| RL run 2 (no pad action, tilt 75–90°, fall −100) | 0.6 cm | 30 % |
+
+**RL has not beaten the baseline yet.** What was checked:
+- The pipeline is correct: an untrained policy outputs actions under 0.02 and scores exactly like the baseline.
+- Run 1 failed because exploration could lower pad voltage (instant falls), and a −20 fall penalty made rushing on easier 45° walls worthwhile.
+- Run 2 hovers at baseline level and drifts worse. The likely cause is physics, not tuning: on the weakest training walls (55 % grip), three stuck pads give 3 × 15 N × 0.55 × 0.6 ≈ 14.9 N against a 14.3 N weight. That's no margin. A crawl gait must lift a foot, so joint corrections can't save those walls.
+
+**Next RL steps:** give the policy levers that matter physically (pause/hold, choose which foot to lift, press force), restrict training to feasible walls plus a curriculum, use larger evaluation sets for model selection, and move to GPU-parallel simulation (MuJoCo MJX / Isaac Lab) for 100M+ steps.
+
 ## Physics checks ([`check_physics.py`](check_physics.py))
 
 | Case | Result |
@@ -77,6 +102,6 @@ This is the baseline the reinforcement-learning policy has to beat. It also show
 
 ## Next
 
-1. PPO training with the gravity-tilt curriculum (MuJoCo MJX / Isaac Lab for thousands of parallel environments), starting from the crawl gait
+1. RL run 3: hold/pause action, feasible-wall curriculum, larger eval sets (see above)
 2. Replace the placeholder adhesion with the test-rig model
 3. Floor-to-wall transitions

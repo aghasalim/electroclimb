@@ -30,11 +30,13 @@ def gravity_for_tilt(tilt_deg):
 
 class ClimbEnv:
     def __init__(self, tilt_deg=90.0, frame_skip=10, episode_s=10.0,
-                 randomise=True, fail_prob=1e-4, seed=None):
+                 randomise=True, fail_prob=1e-4, seed=None,
+                 surface_range=(0.4, 1.0), humidity_range=(0.7, 1.0)):
         self.model = mujoco.MjModel.from_xml_path(str(XML))
         self.data = mujoco.MjData(self.model)
         self.tilt_deg, self.frame_skip, self.randomise = tilt_deg, frame_skip, randomise
         self.fail_prob = fail_prob
+        self.surface_range, self.humidity_range = surface_range, humidity_range
         self.max_steps = int(episode_s / (self.model.opt.timestep * frame_skip))
         self.rng = np.random.default_rng(seed)
 
@@ -77,8 +79,8 @@ class ClimbEnv:
     def reset(self, tilt_deg=None):
         mujoco.mj_resetData(self.model, self.data)
         self.tilt_deg = self.tilt_deg if tilt_deg is None else tilt_deg
-        self.surface = self.rng.uniform(0.4, 1.0) if self.randomise else 1.0      # rough..smooth
-        self.humidity = self.rng.uniform(0.7, 1.0) if self.randomise else 1.0     # humid..dry
+        self.surface = self.rng.uniform(*self.surface_range) if self.randomise else 1.0    # rough..smooth
+        self.humidity = self.rng.uniform(*self.humidity_range) if self.randomise else 1.0  # humid..dry
         self.model.actuator_gainprm[self.adh_ids, 0] = self.adh_gain0 * self.surface * self.humidity
 
         # settle on the floor with pads energised, then rotate gravity to the target tilt

@@ -1,3 +1,6 @@
 mujoco>=3.2
 numpy
 pillow
+gymnasium
+stable-baselines3>=2.3
+torch
