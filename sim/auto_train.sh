@@ -5,13 +5,13 @@ set -u
 PY=../.venv/bin/python
 TARGET=90
 CONFIGS=(
-  "--lr 1e-4 --log-std -2.0 --seed 0 --steps 3000000"
-  "--lr 3e-5 --log-std -2.5 --seed 1 --steps 3000000"
-  "--lr 1e-4 --log-std -1.5 --seed 2 --steps 4000000"
-  "--lr 5e-5 --log-std -2.0 --seed 3 --steps 5000000"
+  "--lr 3e-5 --log-std -2.5 --seed 10 --steps 3000000"
+  "--lr 1e-4 --log-std -2.0 --seed 11 --steps 3000000"
+  "--lr 1e-4 --log-std -1.5 --seed 12 --steps 4000000"
+  "--lr 5e-5 --log-std -2.0 --seed 13 --steps 5000000"
 )
 for i in "${!CONFIGS[@]}"; do
-  n=$((i + 3))
+  n=$((i + 7))
   echo "=== attempt $n: ${CONFIGS[$i]} ==="
   rm -rf runs
   $PY -W ignore train.py --envs 8 --eval-every 150000 ${CONFIGS[$i]} 2>&1 | grep '\[eval\]'

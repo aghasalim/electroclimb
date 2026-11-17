@@ -5,3 +5,4 @@ sim/runs*/
 sim/train.log
 sim/eval_attempt*.txt
 sim/auto_train.log
+sim/*.log

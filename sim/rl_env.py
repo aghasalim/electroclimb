@@ -3,6 +3,10 @@
 The policy does not learn to climb from scratch. It learns corrections:
   - 12 joint offsets added to the gait's joint targets (each up to +-RESIDUAL)
   - 1 gait speed: -1 = hold still (pause the gait), 0 = normal, +1 = 1.25x
+  - 1 body height: +-1.5 cm (all feet toward / away from the body; lower = less peel moment)
+  - 1 press: 0..1 cm extra push of the stance feet while one foot swings
+  - 4 leg preferences: which leg steps next (0 = the default crawl order)
+Zero action = the hand-written gait exactly.
 Pad voltages stay with the gait (always full on stance feet): in run 1, letting the policy
 lower them made random exploration drop the robot.
 Everything the gait cannot see (weak grip, a pad failing, humidity) is what RL is for.
@@ -11,11 +15,12 @@ import gymnasium as gym
 import numpy as np
 
 from crawl_gait import CrawlGait
-from env import ClimbEnv
+from env import FEET, ClimbEnv
 
-RESIDUAL = 0.15          # max joint correction, in the env's action units
+RESIDUAL = 0.05          # max joint correction, in the env's action units
 TRAIN_TILTS = (75.0, 90.0)   # train where it is hard (run 1 used 45..90 and learned to rush)
-ACT_DIM = 13
+ACT_DIM = 19
+LOWER_M, PRESS_M = 0.015, 0.01
 FALL_PENALTY = 100.0
 # Grip >= 70 %: 3 stuck pads hold >= 1.3x the robot's weight. Below ~55 % no crawl gait
 # can hold a vertical wall (run 2), so those walls only taught the policy noise.
@@ -33,13 +38,18 @@ class ResidualClimbEnv(gym.Env):
                             surface_range=surface_range, humidity_range=humidity_range)
         self.tilt_range, self.use_policy = tilt_range, use_policy
         self.rng = np.random.default_rng(seed)
-        obs_dim = 54 + 3
+        obs_dim = 54 + 3 + 4
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (obs_dim,), np.float32)
         self.action_space = gym.spaces.Box(-1.0, 1.0, (ACT_DIM,), np.float32)
 
     def _obs(self, base):
         phase = 2 * np.pi * (self.gait.t % self.gait.cycle) / self.gait.cycle
-        extra = [np.sin(phase), np.cos(phase), self.env.tilt_deg / 90.0]
+        t = self.gait.t % self.gait.cycle
+        k = int(t // self.gait.step_s)
+        swing = np.zeros(4)
+        if k < 4 and k < len(self.gait.cycle_order):            # which leg is stepping now
+            swing[FEET.index(self.gait.cycle_order[k])] = 1.0
+        extra = [np.sin(phase), np.cos(phase), self.env.tilt_deg / 90.0, *swing]
         return np.concatenate([base, extra]).astype(np.float32)
 
     def reset(self, seed=None, options=None):
@@ -57,6 +67,9 @@ class ResidualClimbEnv(gym.Env):
         action = np.clip(action, -1, 1) if self.use_policy else np.zeros(ACT_DIM)
         s = float(action[12])
         self.gait.speed = 1.0 + (0.25 * s if s >= 0 else s)   # -1 pauses the gait (hold)
+        self.gait.lower = LOWER_M * float(action[13])
+        self.gait.press = PRESS_M * max(float(action[14]), 0.0)
+        self.gait.leg_pref = action[15:19]
         a = self.gait(self.env._foot_contacts())
         a[:12] += RESIDUAL * action[:12]
         base, _, done, info = self.env.step(a)
