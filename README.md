@@ -20,6 +20,7 @@
 | [`tools/driver_calc.py`](tools/driver_calc.py) | HV driver component values + design-rule checks |
 | [`sim/`](sim/) | MuJoCo model, climbing environment, crawl gait, physics checks, media renderer (stage 2) |
 | [`media/`](media/) | Simulation GIFs and images (rendered by `sim/render_media.py`) |
+| [`docs/HOW_IT_WORKS.md`](docs/HOW_IT_WORKS.md) | How it works: leg mechanism, gait, electroadhesion physics, peel moment, HV driver, RL loop, results |
 | [`docs/`](docs/) | Sponsorship sheet |
 
 ## Why

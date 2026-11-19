@@ -9,7 +9,7 @@ Observation: joint pos/vel, torso orientation (quat), gyro, accelerometer,
              per-foot grip estimate (noisy capacitance proxy), previous action.
 
 Adhesion randomisation (per episode): surface factor, humidity factor, and a small
-per-step chance that a pad loses grip. This is a placeholder for the data-driven
+per-step chance that a pad loses grip (one half of a split pad drops out). This is a placeholder for the data-driven
 adhesion model from the stage 1 test rig (hardware/foot/README.md section 5).
 """
 from pathlib import Path
@@ -30,12 +30,15 @@ def gravity_for_tilt(tilt_deg):
 
 class ClimbEnv:
     def __init__(self, tilt_deg=90.0, frame_skip=10, episode_s=10.0,
-                 randomise=True, fail_prob=1e-4, seed=None,
+                 randomise=True, fail_prob=1e-4, drop_level=0.5, seed=None,
                  surface_range=(0.4, 1.0), humidity_range=(0.7, 1.0)):
         self.model = mujoco.MjModel.from_xml_path(str(XML))
         self.data = mujoco.MjData(self.model)
         self.tilt_deg, self.frame_skip, self.randomise = tilt_deg, frame_skip, randomise
         self.fail_prob = fail_prob
+        # Each pad is split into two halves with their own HV driver, so a drop-out (driver fault,
+        # arc, dust) only loses half a pad: voltage falls to drop_level. 0.0 = one-piece pad.
+        self.drop_level = drop_level
         self.surface_range, self.humidity_range = surface_range, humidity_range
         self.max_steps = int(episode_s / (self.model.opt.timestep * frame_skip))
         self.rng = np.random.default_rng(seed)
@@ -100,7 +103,8 @@ class ClimbEnv:
         half = (self.jnt_hi - self.jnt_lo) / 2
         self.data.ctrl[:12] = np.clip(STAND + a[:12] * half, self.jnt_lo, self.jnt_hi)
         volts = a[12:].copy()
-        volts[self.rng.random(4) < self.fail_prob] = 0.0  # random grip loss
+        drop = self.rng.random(4) < self.fail_prob         # random grip loss
+        volts[drop] *= self.drop_level
         self.data.ctrl[self.adh_ids] = volts
         mujoco.mj_step(self.model, self.data, self.frame_skip)
         self.steps += 1

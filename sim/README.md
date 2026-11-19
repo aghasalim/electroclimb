@@ -129,7 +129,25 @@ The action now also has body height (±1.5 cm toward the wall), stance-foot pres
 
 A sweep of fixed lever values made things worse, not better: body lower +1 cm 80 %, −1 cm 48 %; press 0.5 cm 65 %, 1 cm 25 %; gait speed 0.7 72 %. The realistic ceiling on this test set is about 36–38 of 40 (90–95 %), so the gap left is small and lives in the marginal walls.
 
-**Next RL steps:** recover from pad drop-outs (re-press and wait instead of continuing the step), a curriculum from holdable to hard walls, and GPU-parallel simulation (MuJoCo MJX / Isaac Lab) for 100M+ steps. On the hardware side, bigger pads or a lighter robot move walls 0/4/15/17/30 out of the danger zone.
+### Pad drop-outs: split pads (hardware fix)
+
+A drop-out lasts one control step (20 ms) and the voltage comes straight back, so the robot has already slid before any reaction can land. Three gait-side recovery triggers were tried (a stance foot losing contact, the body sliding down, the driver seeing a pad's voltage collapse), each followed by holding still and re-pressing the feet. None beat the plain gait: stance feet briefly lose contact about 50 times per episode in normal walking, and every hold costs climbing time.
+
+The fix is in hardware: **split each pad into two halves with their own driver**, so a drop-out only loses half a pad (`drop_level=0.5` in [`env.py`](env.py), now the default).
+
+| Plain crawl gait, 40 hard walls ([`eval_gait.py`](eval_gait.py)) | Success | Falls | Climbed |
+|---|---|---|---|
+| One-piece pads | 80 % | 15 % | 8.6 cm |
+| **Split pads** | **88 %** | **12 %** | **10.9 cm** |
+| Split pads, +5 % pad force | 90 % | 10 % | 12.4 cm |
+| Split pads, +10 % pad force | 95 % | 2 % | 15.0 cm |
+| Split pads, +20 % pad force | 100 % | 0 % | 17.5 cm |
+
+Walls 5, 10 and 34 now pass. With split pads, constant body height, press force and stride changes don't save the remaining walls (15, 17, 30); RL runs 11 (lr 5e-5, log-std −2.0, 4M steps, on a second Mac) and 12 (lr 3e-5, log-std −2.5, 3M steps) both end at 88 %, equal to the gait.
+
+**The 90 % target is a hardware margin question.** 10 % more pad force (for example 80 × 66 mm pads instead of 80 × 60 mm, or a robot about 10 % lighter) gives 95 % with the hand-written gait alone. Pad force in the simulation is still the 15 N placeholder, so the test rig has to confirm the real margin.
+
+**Next:** measure real pad force on the test rig, then size the pads for at least 10 % margin on the worst surface the robot should climb. RL is still useful for walls the gait can't handle, with a curriculum and GPU-parallel simulation (MuJoCo MJX / Isaac Lab).
 
 ## Physics checks ([`check_physics.py`](check_physics.py))
 
@@ -141,6 +159,6 @@ A sweep of fixed lever values made things worse, not better: body lower +1 cm 80
 
 ## Next
 
-1. RL: drop-out recovery, curriculum, GPU training (see above)
+1. Split pads with about 10 % more pad force than the current design (see above)
 2. Replace the placeholder adhesion with the test-rig model
 3. Floor-to-wall transitions
