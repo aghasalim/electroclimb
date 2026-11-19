@@ -15,8 +15,10 @@ from PIL import Image, ImageDraw
 
 from crawl_gait import climb
 
+from PIL import ImageFont
+FONT = ImageFont.load_default(13)
 OUT = Path(__file__).resolve().parent.parent / "media"
-W = H = 360
+W = H = 480
 EVERY = 6            # grab every 6th control step (0.12 s) ...
 FRAME_MS = 60        # ... and play at 60 ms -> 2x real time
 
@@ -30,21 +32,33 @@ def make_camera(lookat, distance, elevation, azimuth):
 
 VIEWS = {
     # looking straight at the wall
-    "front": dict(lookat=(0.11, 0, 0.05), distance=0.75, elevation=-90, azimuth=90, rotate=90),
+    "front": dict(lookat=(0.11, 0, 0.05), distance=0.72, elevation=-90, azimuth=90, rotate=90),
     # from the side, wall on the right
     "side": dict(lookat=(0.11, 0, 0.06), distance=0.75, elevation=-5, azimuth=90, rotate=90),
     # close-up of the hind-right leg, looking down the wall at an angle
     "leg": dict(lookat=(-0.05, -0.07, 0.04), distance=0.42, elevation=-35, azimuth=70, rotate=90),
     # 3/4 view for the hero image
-    "hero": dict(lookat=(0.12, 0, 0.05), distance=0.6, elevation=-25, azimuth=135, rotate=90),
+    "hero": dict(lookat=(0.07, 0, 0.05), distance=0.58, elevation=-34, azimuth=58, rotate=90),
 }
+
+
+PAD_ON, PAD_OFF = np.array([1.0, 0.66, 0.12, 1]), np.array([0.45, 0.33, 0.22, 1])
+LED_ON, LED_OFF = np.array([0.25, 1.0, 0.45, 1]), np.array([0.12, 0.14, 0.13, 1])
+
+
+def show_voltage(env):
+    """Colour each pad and its LED by the pad voltage: bright = energised, dull = released."""
+    for i, f in enumerate(("fl", "fr", "hl", "hr")):
+        v = float(env.data.ctrl[env.adh_ids[i]])
+        env.model.geom_rgba[env.model.geom(f"{f}_pad").id] = PAD_OFF + v * (PAD_ON - PAD_OFF)
+        env.model.geom_rgba[env.model.geom(f"{f}_led").id] = LED_OFF + v * (LED_ON - LED_OFF)
 
 
 def label(im, text, sub):
     d = ImageDraw.Draw(im)
-    d.rectangle((0, 0, im.width, 34), fill=(20, 20, 20))
-    d.text((8, 4), text, fill=(255, 255, 255))
-    d.text((8, 19), sub, fill=(255, 170, 60))
+    d.rectangle((0, 0, im.width, 40), fill=(20, 22, 26))
+    d.text((10, 6), text, fill=(255, 255, 255), font=FONT)
+    d.text((10, 22), sub, fill=(255, 170, 60), font=FONT)
     return im
 
 
@@ -59,6 +73,7 @@ def render_view(name, seconds=20.0):
         if n % EVERY:
             return
         r = state["r"]
+        show_voltage(env)
         r.update_scene(env.data, state["cam"])
         im = Image.fromarray(r.render().copy()).rotate(v["rotate"], expand=True)
         t = n * env.model.opt.timestep * env.frame_skip
