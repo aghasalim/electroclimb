@@ -19,6 +19,7 @@
 | [`tools/gen_electrode.py`](tools/gen_electrode.py) | Parametric electrode pad generator (`--selftest` checks for shorts) |
 | [`tools/driver_calc.py`](tools/driver_calc.py) | HV driver component values + design-rule checks |
 | [`sim/`](sim/) | MuJoCo model, climbing environment, crawl gait, physics checks, media renderer (stage 2) |
+| [`inspection/`](inspection/) | Crack-detection CNN, RAG inspection assistant, LLM mission planner (stage 5) |
 | [`media/`](media/) | Simulation GIFs and images (rendered by `sim/render_media.py`) |
 | [`docs/HOW_IT_WORKS.md`](docs/HOW_IT_WORKS.md) | How it works: leg mechanism, gait, electroadhesion physics, peel moment, HV driver, RL loop, results |
 | [`docs/`](docs/) | Sponsorship sheet |
@@ -90,6 +91,19 @@ Success = no fall and at least 10 cm climbed in 20 s on 40 hard vertical test wa
 | Crawl gait, split pads, +10 % pad force | **95 %** | **2 %** |
 
 Splitting each pad into two independently driven halves fixes random pad drop-outs. The rest is a margin question: about 10 % more pad force (bigger pads or a lighter robot) takes the plain gait to 95 %. Details in [`sim/README.md`](sim/README.md).
+
+## AI in ElectroClimb
+
+| Part | Method | Result | Code |
+|---|---|---|---|
+| Climbing control | Residual RL on a crawl gait: PPO, SAC, curriculum, teacher-student distillation (DAgger) | 88 % on 40 hard walls; 95 % with 10 % more pad force | [`sim/`](sim/README.md) |
+| Crack detection | CNN on 40,000 concrete photos, tile scan of wall images | 99.25 % on 4,000 unseen photos | [`inspection/crack_model.py`](inspection/crack_model.py) |
+| Inspection assistant | RAG: BM25 over the FHWA Bridge Inspector's Reference Manual + Claude with page citations | answers and defect reports cite manual pages | [`inspection/rag.py`](inspection/rag.py) |
+| Mission planning | LLM (Claude) turns a sentence into a checked waypoint plan the robot climbs in simulation | holds within 0.03 cm at each inspection stop | [`inspection/mission.py`](inspection/mission.py) |
+
+<p align="center"><img src="media/crack_scan.png" width="460" alt="Crack scan marking cracked tiles in red"></p>
+
+Details: [`inspection/README.md`](inspection/README.md) and [`sim/README.md`](sim/README.md).
 
 ## The robot
 

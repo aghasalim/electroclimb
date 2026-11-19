@@ -6,3 +6,7 @@ sim/train.log
 sim/eval_attempt*.txt
 sim/auto_train.log
 sim/*.log
+data/
+inspection/missions/
+sim/eval_*.txt
+__pycache__/

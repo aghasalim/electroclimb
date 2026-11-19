@@ -149,6 +149,30 @@ Walls 5, 10 and 34 now pass. With split pads, constant body height, press force 
 
 **Next:** measure real pad force on the test rig, then size the pads for at least 10 % margin on the worst surface the robot should climb. RL is still useful for walls the gait can't handle, with a curriculum and GPU-parallel simulation (MuJoCo MJX / Isaac Lab).
 
+### More RL methods: SAC, curriculum, teacher-student
+
+All on the 40 hard test walls with split pads, trained on the second Mac (M5 Max) over Tailscale.
+
+```bash
+../.venv/bin/python train.py --algo sac --out runs_sac            # off-policy SAC instead of PPO
+../.venv/bin/python train.py --curriculum --out runs_curr         # walls from 75 % grip down to 55 %
+../.venv/bin/python train.py --privileged --out runs_teacher      # teacher also sees true grip + drop-outs
+../.venv/bin/python distill.py runs_teacher/best/best_model.zip   # DAgger: sensor-only student
+```
+
+| | Steps | Success | Falls | Climbed |
+|---|---|---|---|---|
+| Crawl gait, split pads | | 88 % | 12 % | 10.9 cm |
+| PPO (runs 11, 12) | 3–4M | 88 % | 12 % | 11.1 cm |
+| PPO + curriculum | 3M | 88 % | 12 % | **11.5 cm** |
+| PPO teacher (privileged observations) | 3M | 88 % | 12 % | 11.2 cm |
+| Student distilled from the teacher (DAgger, 5 rounds, 147k labelled states) | | 88 % | 12 % | 11.2 cm |
+| SAC | 1M | 2 % | 32 % | −10.4 cm |
+
+- **SAC fails here.** With a fall penalty and a survival bonus, freezing on the wall pays better than climbing, and off-policy SAC finds that shortcut within 20k steps. Two fixes were needed just to make it start like the gait (no random warm-up, zero-initialised action layer), and it still drifts away. PPO with a small learning rate stays close to the gait and keeps improving it slightly.
+- **Curriculum** gives the best climb (11.5 cm) but no extra walls.
+- **Teacher-student works:** the student copies the teacher exactly (imitation loss < 0.0001) using only sensors the robot has. But the teacher itself gained nothing from knowing the true grip, which confirms that walls 15, 17 and 30 are a force-margin problem, not a perception problem.
+
 ## Physics checks ([`check_physics.py`](check_physics.py))
 
 | Case | Result |

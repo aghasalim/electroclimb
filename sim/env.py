@@ -94,6 +94,7 @@ class ClimbEnv:
         self.model.opt.gravity[:] = gravity_for_tilt(self.tilt_deg)
         self.start_x = self.data.xpos[self.torso, 0]
         self.steps = 0
+        self.last_drop = np.zeros(4)
         self.prev_action = np.concatenate([np.zeros(12), np.ones(4)])
         return self._obs()
 
@@ -105,6 +106,7 @@ class ClimbEnv:
         volts = a[12:].copy()
         drop = self.rng.random(4) < self.fail_prob         # random grip loss
         volts[drop] *= self.drop_level
+        self.last_drop = drop.astype(float)
         self.data.ctrl[self.adh_ids] = volts
         mujoco.mj_step(self.model, self.data, self.frame_skip)
         self.steps += 1
