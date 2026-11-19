@@ -8,7 +8,8 @@
   <img src="media/climb_wall_front.gif" width="300" alt="Simulated ElectroClimb robot climbing a vertical wall, front view">
   <img src="media/climb_wall_side.gif" width="300" alt="Simulated ElectroClimb robot climbing a vertical wall, side view">
 </p>
-<p align="center"><em>MuJoCo simulation, vertical wall, 2× speed: baseline crawl gait with electroadhesive feet, 18 cm in 20 s without falling. Real physics, not an animation.</em></p>
+<p align="center"><img src="media/climb_pillar.gif" width="300" alt="Simulated ElectroClimb robot climbing a 40 cm concrete pillar"></p>
+<p align="center"><em>MuJoCo simulation, vertical wall and a 40 cm concrete pillar, 2× speed: baseline crawl gait with electroadhesive feet, 18 cm in 20 s without falling. Real physics, not an animation.</em></p>
 
 ## Repository
 
