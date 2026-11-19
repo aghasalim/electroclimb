@@ -10,6 +10,7 @@ cd sim
 ../.venv/bin/python check_physics.py    # holds on the wall with pads on, slides off without
 ../.venv/bin/python crawl_gait.py       # baseline gait climbs floor, 45 deg and vertical wall
 ../.venv/bin/python render_media.py     # GIFs + hero image -> ../media/
+../.venv/bin/python render_pillar.py    # climbing a 40 cm concrete pillar -> ../media/climb_pillar.gif
 ```
 
 ## How climbing is simulated
