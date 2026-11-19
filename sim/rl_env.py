@@ -20,6 +20,7 @@ from env import FEET, ClimbEnv
 RESIDUAL = 0.05          # max joint correction, in the env's action units
 TRAIN_TILTS = (75.0, 90.0)   # train where it is hard (run 1 used 45..90 and learned to rush)
 ACT_DIM = 19
+PRIV_DIM = 5             # teacher-only observations: true grip + 4 pad drop-out flags
 LOWER_M, PRESS_M = 0.015, 0.01
 FALL_PENALTY = 100.0
 # Grip >= 70 %: 3 stuck pads hold >= 1.3x the robot's weight. Below ~55 % no crawl gait
@@ -33,12 +34,15 @@ class ResidualClimbEnv(gym.Env):
     metadata = {"render_modes": []}
 
     def __init__(self, tilt_range=TRAIN_TILTS, episode_s=20.0, seed=None, use_policy=True,
-                 surface_range=HOLDABLE_GRIP, humidity_range=(0.9, 1.0), fail_prob=3e-3):
+                 surface_range=HOLDABLE_GRIP, humidity_range=(0.9, 1.0), fail_prob=3e-3,
+                 privileged=False):
         self.env = ClimbEnv(episode_s=episode_s, randomise=True, fail_prob=fail_prob, seed=seed,
                             surface_range=surface_range, humidity_range=humidity_range)
         self.tilt_range, self.use_policy = tilt_range, use_policy
         self.rng = np.random.default_rng(seed)
-        obs_dim = 54 + 3 + 4
+        # privileged = teacher: also sees the true grip and which pads drop out (the robot can't)
+        self.privileged = privileged
+        obs_dim = 54 + 3 + 4 + (PRIV_DIM if privileged else 0)
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, (obs_dim,), np.float32)
         self.action_space = gym.spaces.Box(-1.0, 1.0, (ACT_DIM,), np.float32)
 
@@ -50,7 +54,13 @@ class ResidualClimbEnv(gym.Env):
         if k < 4 and k < len(self.gait.cycle_order):            # which leg is stepping now
             swing[FEET.index(self.gait.cycle_order[k])] = 1.0
         extra = [np.sin(phase), np.cos(phase), self.env.tilt_deg / 90.0, *swing]
+        if self.privileged:
+            extra += [self.env.surface * self.env.humidity, *self.env.last_drop]
         return np.concatenate([base, extra]).astype(np.float32)
+
+    def set_grip_floor(self, lo):
+        """Curriculum: lowest surface grip of the walls drawn from now on."""
+        self.env.surface_range = (lo, self.env.surface_range[1])
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
