@@ -3,7 +3,7 @@
 
     ../.venv/bin/python render_media.py
 
-Writes media/climb_wall_front.gif, media/climb_wall_side.gif and media/hero.png.
+Writes media/climb_wall_front.gif, media/climb_wall_side.gif, media/leg_closeup.gif and media/hero.png.
 Gravity is tilted 90 deg, so the plane is a vertical wall. Images are rotated so
 "up the wall" (+x) is up on screen.
 """
@@ -33,6 +33,8 @@ VIEWS = {
     "front": dict(lookat=(0.11, 0, 0.05), distance=0.75, elevation=-90, azimuth=90, rotate=90),
     # from the side, wall on the right
     "side": dict(lookat=(0.11, 0, 0.06), distance=0.75, elevation=-5, azimuth=90, rotate=90),
+    # close-up of the hind-right leg, looking down the wall at an angle
+    "leg": dict(lookat=(-0.05, -0.07, 0.04), distance=0.42, elevation=-35, azimuth=70, rotate=90),
     # 3/4 view for the hero image
     "hero": dict(lookat=(0.12, 0, 0.05), distance=0.6, elevation=-25, azimuth=135, rotate=90),
 }
@@ -79,6 +81,8 @@ if __name__ == "__main__":
     for name in ("front", "side"):
         frames, info = render_view(name)
         save_gif(frames, OUT / f"climb_wall_{name}.gif")
+    frames, _ = render_view("leg", seconds=9.0)
+    save_gif(frames, OUT / "leg_closeup.gif")
     frames, _ = render_view("hero", seconds=6.0)
     frames[-1].save(OUT / "hero.png")
     print("saved hero.png")
