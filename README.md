@@ -43,12 +43,60 @@ ElectroClimb treats that as a learning problem. Each foot senses its own grip th
 | Openness | Closed, research hardware | Fully open hardware, firmware, simulation, policies |
 | Cost target | Lab robots | Under €2,000 in parts |
 
+## How it works
+
+<p align="center">
+  <img src="media/leg_closeup.gif" width="300" alt="Close-up of one leg stepping on the wall in simulation">
+</p>
+<p align="center"><em>One leg stepping: the pad lets go, the foot lifts 2.5 cm, moves 4 cm up and sticks again.</em></p>
+
+```mermaid
+mindmap
+  root((ElectroClimb))
+    Legs
+      3 servos per leg, 12 in total
+      Thigh 8.1 cm, shin 6.7 cm
+      Spring ankles keep pads flat
+    Electroadhesion
+      Comb electrodes at 1 to 3 kV
+      Friction carries the weight
+      Split pads survive drop-outs
+    Sensing
+      Pad capacitance shows contact
+      IMU and servo positions
+    Control
+      Crawl gait, one leg at a time
+      Never lift until 3 feet stick
+      RL corrects the gait
+```
+
+- **Legs:** each leg has hip abduction, hip flexion and knee servos (Feetech STS3215). Inverse kinematics turns planned foot positions into joint angles. On a vertical wall the gait needs at most 0.9 N·m per joint.
+- **Gait:** one foot moves at a time (release, lift, swing 4 cm, place until contact, stick), then the body pulls itself up on all four pads. A foot is only released when the other three report contact.
+- **Physics:** the pads press the robot against the wall and friction carries the weight: 0.6 × pads × 15 N × grip must beat 14.3 N. With three pads that needs at least 53 % grip. The weight 9 cm from the wall also tries to peel the upper feet off (about 6.4 N), which is why the body crouches low.
+- **Electronics:** each pad half has its own high-voltage driver (XP Power AG30P-5, 0–3 kV, microamp-limited), a 1 GΩ safety bleeder and a reed relay that releases the pad in about 1 ms.
+
+**Full explanation with diagrams: [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md).**
+
+### Latest simulation results
+
+Success = no fall and at least 10 cm climbed in 20 s on 40 hard vertical test walls.
+
+| | Success | Falls |
+|---|---|---|
+| Crawl gait, one-piece pads | 80 % | 15 % |
+| Best RL policy, one-piece pads | 82 % | 12 % |
+| **Crawl gait, split pads** | **88 %** | **12 %** |
+| RL policy, split pads | 88 % | 12 % |
+| Crawl gait, split pads, +10 % pad force | **95 %** | **2 %** |
+
+Splitting each pad into two independently driven halves fixes random pad drop-outs. The rest is a margin question: about 10 % more pad force (bigger pads or a lighter robot) takes the plain gait to 95 %. Details in [`sim/README.md`](sim/README.md).
+
 ## The robot
 
 - **Body:** quadruped, about 40 cm and under 1.5 kg, with a 3D-printed carbon-fibre-nylon frame.
 - **Legs:** 3 actuated joints per leg (12 total), using low-cost smart servos at first and custom quasi-direct-drive actuators in v2.
 - **Feet:** flexible-PCB electroadhesive pads (polyimide doubles as the insulator) on compliant TPU backings, with a passive ankle so each pad can lie flat.
-- **Foot electronics:** one small high-voltage driver per foot (boost converter plus multiplier, current-limited), and a capacitance-sensing front end on the same electrodes for grip and contact sensing.
+- **Foot electronics:** a small high-voltage driver per pad half (two per foot, so one fault only loses half a pad), current-limited, and a capacitance-sensing front end on the same electrodes for grip and contact sensing.
 - **Compute:** Seeed XIAO microcontrollers per leg on a CAN bus, and a Raspberry Pi 5 or Jetson Orin Nano running the policy and vision.
 - **Sensing:** IMU, joint encoders and currents, per-foot capacitance, front stereo camera.
 - **Safety:** tether line during development, fall detection, and a hardware interlock so the high voltage is only on when the foot is in contact.
