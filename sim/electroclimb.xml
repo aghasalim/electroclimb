@@ -5,10 +5,25 @@ The robot always stands on the plane "wall". Climbing is simulated by rotating g
 12 actuated joints (hip abduction, hip flexion, knee per leg), 2 passive ankle joints per
 foot so the pad lies flat, and one MuJoCo adhesion actuator per foot pad.
 Mass ~1.5 kg. Dimensions are first guesses, to be replaced by the CAD model.
+
+Two kinds of geoms:
+  class "col" (group 3, hidden): the simple shapes that carry all mass and collisions.
+  class "vis" (group 1): what you see. No mass, no contacts, so the look never changes the physics.
+The pad geoms are both: they collide, stick and are drawn.
 -->
 <mujoco model="electroclimb_v0">
   <compiler angle="degree" autolimits="true"/>
   <option timestep="0.002" gravity="0 0 -9.81" cone="elliptic" impratio="10"/>
+
+  <!-- small scene extent: keeps the shadow map sharp around the robot (rendering only) -->
+  <statistic extent="0.7" center="0.1 0 0.05"/>
+
+  <visual>
+    <global offwidth="1280" offheight="1280"/>
+    <quality shadowsize="4096" offsamples="8"/>
+    <headlight ambient="0.34 0.34 0.36" diffuse="0.30 0.30 0.30" specular="0.05 0.05 0.05"/>
+    <map znear="0.01"/>
+  </visual>
 
   <default>
     <joint damping="0.05" armature="0.005"/>
@@ -20,92 +35,169 @@ Mass ~1.5 kg. Dimensions are first guesses, to be replaced by the CAD model.
       <joint range="-20 20" damping="0.05" stiffness="6"/>
     </default>
     <default class="pad">
-      <geom type="box" size="0.03 0.025 0.003" mass="0.03" rgba="0.95 0.6 0.15 1" margin="0.004" gap="0.004"/>
+      <geom type="box" size="0.03 0.025 0.003" mass="0.03" rgba="0.98 0.62 0.12 1" margin="0.004" gap="0.004"/>
+    </default>
+    <default class="col">
+      <geom group="3"/>
+    </default>
+    <default class="vis">
+      <geom contype="0" conaffinity="0" mass="0" group="1"/>
     </default>
   </default>
 
   <asset>
-    <texture name="grid" type="2d" builtin="checker" rgb1="0.72 0.72 0.70" rgb2="0.62 0.62 0.60" width="512" height="512"/>
-    <material name="concrete" texture="grid" texrepeat="20 20" reflectance="0"/>
+    <texture name="sky" type="skybox" builtin="gradient" rgb1="0.78 0.84 0.92" rgb2="0.95 0.96 0.98" width="512" height="512"/>
+    <!-- concrete panels: 10 cm tiles with faint joints, so climbing progress is easy to see -->
+    <texture name="panels" type="2d" builtin="checker" rgb1="0.50 0.51 0.52" rgb2="0.46 0.47 0.48" mark="edge" markrgb="0.38 0.39 0.40" width="512" height="512"/>
+    <material name="concrete" texture="panels" texrepeat="30 30" reflectance="0" specular="0.05" shininess="0.1"/>
+    <material name="shell" rgba="0.93 0.94 0.95 1" specular="0.5" shininess="0.6"/>
+    <material name="graphite" rgba="0.14 0.15 0.17 1" specular="0.4" shininess="0.5"/>
+    <material name="carbon" rgba="0.08 0.08 0.09 1" specular="0.7" shininess="0.8"/>
+    <material name="alu" rgba="0.74 0.76 0.80 1" specular="0.8" shininess="0.8"/>
+    <material name="accent" rgba="0.98 0.55 0.10 1" specular="0.4" shininess="0.5"/>
+    <material name="rubber" rgba="0.10 0.10 0.11 1" specular="0.05" shininess="0.1"/>
+    <material name="pcb" rgba="0.06 0.30 0.18 1" specular="0.3" shininess="0.4"/>
+    <material name="glass" rgba="0.05 0.07 0.10 1" specular="0.9" shininess="0.95"/>
+    <material name="lens" rgba="0.12 0.32 0.62 1" specular="0.9" shininess="0.95"/>
+    <material name="led" rgba="0.25 1.0 0.45 1" emission="1"/>
   </asset>
 
   <worldbody>
-    <light pos="0 0 2" dir="0 0 -1"/>
+    <light directional="true" pos="0.6 -0.8 1.5" dir="-0.28 0.36 -1" castshadow="true" diffuse="0.62 0.62 0.60" specular="0.25 0.25 0.25"/>
     <geom name="wall" type="plane" size="3 3 0.1" material="concrete"/>
 
     <body name="torso" pos="0 0 0.14">
       <freejoint/>
-      <geom type="box" size="0.1 0.06 0.02" mass="0.9" rgba="0.35 0.35 0.35 1"/>
+      <geom class="col" type="box" size="0.1 0.06 0.02" mass="0.9"/>
       <site name="imu"/>
+      <!-- body shell: rounded white cover on a graphite belly -->
+      <geom class="vis" type="box" pos="0 0 0.003" size="0.086 0.046 0.015" material="shell"/>
+      <geom class="vis" type="capsule" fromto="-0.086 0.046 0.003 0.086 0.046 0.003" size="0.015" material="shell"/>
+      <geom class="vis" type="capsule" fromto="-0.086 -0.046 0.003 0.086 -0.046 0.003" size="0.015" material="shell"/>
+      <geom class="vis" type="capsule" fromto="0.086 -0.046 0.003 0.086 0.046 0.003" size="0.015" material="shell"/>
+      <geom class="vis" type="capsule" fromto="-0.086 -0.046 0.003 -0.086 0.046 0.003" size="0.015" material="shell"/>
+      <geom class="vis" type="box" pos="0 0 -0.014" size="0.092 0.052 0.005" material="graphite"/>
+      <!-- top deck: dark glass panel, accent stripe, status LED -->
+      <geom class="vis" type="box" pos="-0.012 0 0.0182" size="0.052 0.030 0.0006" material="glass"/>
+      <geom class="vis" type="box" pos="0.058 0 0.0182" size="0.004 0.040 0.0006" material="accent"/>
+      <geom name="status_led" class="vis" type="sphere" pos="-0.074 0 0.0185" size="0.0035" material="led"/>
+      <!-- sensor head at the front (+x, the climbing direction): stereo camera -->
+      <geom class="vis" type="box" pos="0.103 0 0.003" size="0.004 0.032 0.009" material="glass"/>
+      <geom class="vis" type="cylinder" fromto="0.105 0.016 0.003 0.109 0.016 0.003" size="0.006" material="lens"/>
+      <geom class="vis" type="cylinder" fromto="0.105 -0.016 0.003 0.109 -0.016 0.003" size="0.006" material="lens"/>
 
-      <!-- leg template: hip at torso corner, abduction (x), flexion (y), knee (y) -->
       <body name="fl_hip" pos="0.1 0.06 0">
         <joint name="fl_abd" axis="1 0 0" range="-30 30"/>
-        <geom type="capsule" fromto="0 0 0 0 0.02 0" size="0.012" mass="0.04"/>
+        <geom class="col" type="capsule" fromto="0 0 0 0 0.02 0" size="0.012" mass="0.04"/>
+        <geom class="vis" type="box" pos="0 0.008 0" size="0.019 0.013 0.015" material="graphite"/>
+        <geom class="vis" type="cylinder" fromto="-0.021 0.008 0 0.021 0.008 0" size="0.008" material="accent"/>
         <body name="fl_thigh" pos="0 0.02 0">
           <joint name="fl_hip" axis="0 1 0" range="-90 90"/>
-          <geom type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
+          <geom class="col" type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
+          <geom class="vis" type="cylinder" fromto="0 -0.011 0 0 0.011 0" size="0.016" material="graphite"/>
+          <geom class="vis" type="cylinder" fromto="0 0.011 0 0 0.013 0" size="0.010" material="accent"/>
+          <geom class="vis" type="capsule" fromto="0.006 0 -0.0105 0.034 0 -0.0595" size="0.0105" material="shell"/>
           <body name="fl_shin" pos="0.04 0 -0.07">
             <joint name="fl_knee" axis="0 1 0" range="0 150"/>
-            <geom type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
+            <geom class="col" type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
+            <geom class="vis" type="cylinder" fromto="0 -0.010 0 0 0.010 0" size="0.014" material="graphite"/>
+            <geom class="vis" type="cylinder" fromto="0 0.01 0 0 0.012 0" size="0.0085" material="accent"/>
+            <geom class="vis" type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.0055" material="carbon"/>
+            <geom class="vis" type="sphere" pos="-0.03 0 -0.06" size="0.0085" material="alu"/>
             <body name="fl_foot" pos="-0.03 0 -0.06" euler="0 -34.4 0">
               <joint name="fl_ank_x" class="ankle" axis="1 0 0"/>
               <joint name="fl_ank_y" class="ankle" axis="0 1 0"/>
               <geom name="fl_pad" class="pad" pos="0 0 -0.004"/>
+              <geom class="vis" type="box" pos="0 0 0.001" size="0.023 0.018 0.002" material="rubber"/>
+              <geom class="vis" type="box" pos="0.011 0 0.0055" size="0.009 0.008 0.0028" material="pcb"/>
+              <geom name="fl_led" class="vis" type="sphere" pos="0.011 0 0.0085" size="0.0028" material="led"/>
             </body>
           </body>
         </body>
       </body>
-
       <body name="fr_hip" pos="0.1 -0.06 0">
         <joint name="fr_abd" axis="1 0 0" range="-30 30"/>
-        <geom type="capsule" fromto="0 0 0 0 -0.02 0" size="0.012" mass="0.04"/>
+        <geom class="col" type="capsule" fromto="0 0 0 0 -0.02 0" size="0.012" mass="0.04"/>
+        <geom class="vis" type="box" pos="0 -0.008 0" size="0.019 0.013 0.015" material="graphite"/>
+        <geom class="vis" type="cylinder" fromto="-0.021 -0.008 0 0.021 -0.008 0" size="0.008" material="accent"/>
         <body name="fr_thigh" pos="0 -0.02 0">
           <joint name="fr_hip" axis="0 1 0" range="-90 90"/>
-          <geom type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
+          <geom class="col" type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
+          <geom class="vis" type="cylinder" fromto="0 -0.011 0 0 0.011 0" size="0.016" material="graphite"/>
+          <geom class="vis" type="cylinder" fromto="0 -0.011 0 0 -0.013 0" size="0.010" material="accent"/>
+          <geom class="vis" type="capsule" fromto="0.006 0 -0.0105 0.034 0 -0.0595" size="0.0105" material="shell"/>
           <body name="fr_shin" pos="0.04 0 -0.07">
             <joint name="fr_knee" axis="0 1 0" range="0 150"/>
-            <geom type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
+            <geom class="col" type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
+            <geom class="vis" type="cylinder" fromto="0 -0.010 0 0 0.010 0" size="0.014" material="graphite"/>
+            <geom class="vis" type="cylinder" fromto="0 -0.01 0 0 -0.012 0" size="0.0085" material="accent"/>
+            <geom class="vis" type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.0055" material="carbon"/>
+            <geom class="vis" type="sphere" pos="-0.03 0 -0.06" size="0.0085" material="alu"/>
             <body name="fr_foot" pos="-0.03 0 -0.06" euler="0 -34.4 0">
               <joint name="fr_ank_x" class="ankle" axis="1 0 0"/>
               <joint name="fr_ank_y" class="ankle" axis="0 1 0"/>
               <geom name="fr_pad" class="pad" pos="0 0 -0.004"/>
+              <geom class="vis" type="box" pos="0 0 0.001" size="0.023 0.018 0.002" material="rubber"/>
+              <geom class="vis" type="box" pos="0.011 0 0.0055" size="0.009 0.008 0.0028" material="pcb"/>
+              <geom name="fr_led" class="vis" type="sphere" pos="0.011 0 0.0085" size="0.0028" material="led"/>
             </body>
           </body>
         </body>
       </body>
-
       <body name="hl_hip" pos="-0.1 0.06 0">
         <joint name="hl_abd" axis="1 0 0" range="-30 30"/>
-        <geom type="capsule" fromto="0 0 0 0 0.02 0" size="0.012" mass="0.04"/>
+        <geom class="col" type="capsule" fromto="0 0 0 0 0.02 0" size="0.012" mass="0.04"/>
+        <geom class="vis" type="box" pos="0 0.008 0" size="0.019 0.013 0.015" material="graphite"/>
+        <geom class="vis" type="cylinder" fromto="0.021 0.008 0 -0.021 0.008 0" size="0.008" material="accent"/>
         <body name="hl_thigh" pos="0 0.02 0">
           <joint name="hl_hip" axis="0 1 0" range="-90 90"/>
-          <geom type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
+          <geom class="col" type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
+          <geom class="vis" type="cylinder" fromto="0 -0.011 0 0 0.011 0" size="0.016" material="graphite"/>
+          <geom class="vis" type="cylinder" fromto="0 0.011 0 0 0.013 0" size="0.010" material="accent"/>
+          <geom class="vis" type="capsule" fromto="0.006 0 -0.0105 0.034 0 -0.0595" size="0.0105" material="shell"/>
           <body name="hl_shin" pos="0.04 0 -0.07">
             <joint name="hl_knee" axis="0 1 0" range="0 150"/>
-            <geom type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
+            <geom class="col" type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
+            <geom class="vis" type="cylinder" fromto="0 -0.010 0 0 0.010 0" size="0.014" material="graphite"/>
+            <geom class="vis" type="cylinder" fromto="0 0.01 0 0 0.012 0" size="0.0085" material="accent"/>
+            <geom class="vis" type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.0055" material="carbon"/>
+            <geom class="vis" type="sphere" pos="-0.03 0 -0.06" size="0.0085" material="alu"/>
             <body name="hl_foot" pos="-0.03 0 -0.06" euler="0 -34.4 0">
               <joint name="hl_ank_x" class="ankle" axis="1 0 0"/>
               <joint name="hl_ank_y" class="ankle" axis="0 1 0"/>
               <geom name="hl_pad" class="pad" pos="0 0 -0.004"/>
+              <geom class="vis" type="box" pos="0 0 0.001" size="0.023 0.018 0.002" material="rubber"/>
+              <geom class="vis" type="box" pos="0.011 0 0.0055" size="0.009 0.008 0.0028" material="pcb"/>
+              <geom name="hl_led" class="vis" type="sphere" pos="0.011 0 0.0085" size="0.0028" material="led"/>
             </body>
           </body>
         </body>
       </body>
-
       <body name="hr_hip" pos="-0.1 -0.06 0">
         <joint name="hr_abd" axis="1 0 0" range="-30 30"/>
-        <geom type="capsule" fromto="0 0 0 0 -0.02 0" size="0.012" mass="0.04"/>
+        <geom class="col" type="capsule" fromto="0 0 0 0 -0.02 0" size="0.012" mass="0.04"/>
+        <geom class="vis" type="box" pos="0 -0.008 0" size="0.019 0.013 0.015" material="graphite"/>
+        <geom class="vis" type="cylinder" fromto="0.021 -0.008 0 -0.021 -0.008 0" size="0.008" material="accent"/>
         <body name="hr_thigh" pos="0 -0.02 0">
           <joint name="hr_hip" axis="0 1 0" range="-90 90"/>
-          <geom type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
+          <geom class="col" type="capsule" fromto="0 0 0 0.04 0 -0.07" size="0.01" mass="0.04"/>
+          <geom class="vis" type="cylinder" fromto="0 -0.011 0 0 0.011 0" size="0.016" material="graphite"/>
+          <geom class="vis" type="cylinder" fromto="0 -0.011 0 0 -0.013 0" size="0.010" material="accent"/>
+          <geom class="vis" type="capsule" fromto="0.006 0 -0.0105 0.034 0 -0.0595" size="0.0105" material="shell"/>
           <body name="hr_shin" pos="0.04 0 -0.07">
             <joint name="hr_knee" axis="0 1 0" range="0 150"/>
-            <geom type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
+            <geom class="col" type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.008" mass="0.03"/>
+            <geom class="vis" type="cylinder" fromto="0 -0.010 0 0 0.010 0" size="0.014" material="graphite"/>
+            <geom class="vis" type="cylinder" fromto="0 -0.01 0 0 -0.012 0" size="0.0085" material="accent"/>
+            <geom class="vis" type="capsule" fromto="0 0 0 -0.03 0 -0.06" size="0.0055" material="carbon"/>
+            <geom class="vis" type="sphere" pos="-0.03 0 -0.06" size="0.0085" material="alu"/>
             <body name="hr_foot" pos="-0.03 0 -0.06" euler="0 -34.4 0">
               <joint name="hr_ank_x" class="ankle" axis="1 0 0"/>
               <joint name="hr_ank_y" class="ankle" axis="0 1 0"/>
               <geom name="hr_pad" class="pad" pos="0 0 -0.004"/>
+              <geom class="vis" type="box" pos="0 0 0.001" size="0.023 0.018 0.002" material="rubber"/>
+              <geom class="vis" type="box" pos="0.011 0 0.0055" size="0.009 0.008 0.0028" material="pcb"/>
+              <geom name="hr_led" class="vis" type="sphere" pos="0.011 0 0.0085" size="0.0028" material="led"/>
             </body>
           </body>
         </body>

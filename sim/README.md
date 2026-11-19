@@ -33,6 +33,7 @@ This gives the training curriculum directly: start on the floor and raise the ti
 - 2 passive, spring-loaded ankle joints per foot. The pads are pre-rotated so the spring holds them **flat** in the stance.
 - **Electroadhesion = MuJoCo `adhesion` actuator** per foot: action 0–1 is pad voltage 0–100 %, gain 15 N max pull
 - IMU: orientation, gyro, accelerometer
+- **Looks and physics are separate:** hidden `col` shapes carry all mass and contacts; `vis` shapes (shell, servos, links, stereo camera, pad electronics) have no mass and no contacts. The redesign left mass (1.46 kg), inertia and the 18.0 cm climb unchanged. In the renders, pads and their LEDs are bright while energised and dull while released.
 
 ## Environment ([`env.py`](env.py))
 

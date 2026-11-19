@@ -12,9 +12,9 @@ import numpy as np
 from PIL import Image
 
 from crawl_gait import climb
-from render_media import OUT, label, make_camera, save_gif
+from render_media import OUT, label, make_camera, save_gif, show_voltage
 
-W = H = 420
+W = H = 480
 EVERY = 6
 PILLAR = 0.20          # half width: a 40 cm square column
 FLOOR_X = -0.35        # floor 35 cm below the robot's start (up the wall = +x)
@@ -60,6 +60,7 @@ def main(seconds=20.0):
         if n % EVERY:
             return
         r = st["r"]
+        show_voltage(env)
         r.update_scene(env.data, st["cam"])
         dress_scene(r.scene, env.model)
         im = Image.fromarray(r.render().copy()).rotate(90, expand=True)
