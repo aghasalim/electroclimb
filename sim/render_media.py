@@ -3,7 +3,8 @@
 
     ../.venv/bin/python render_media.py
 
-Writes media/climb_wall_front.gif, media/climb_wall_side.gif, media/leg_closeup.gif and media/hero.png.
+Writes media/climb_wall_front.gif, climb_wall_side.gif, leg_closeup.gif, hero.png, model_views.png
+and model_turntable.gif.
 Gravity is tilted 90 deg, so the plane is a vertical wall. Images are rotated so
 "up the wall" (+x) is up on screen.
 """
@@ -43,6 +44,7 @@ VIEWS = {
 
 
 PAD_ON, PAD_OFF = np.array([1.0, 0.66, 0.12, 1]), np.array([0.45, 0.33, 0.22, 1])
+FLEX_ON, FLEX_OFF = np.array([1.0, 1.0, 1.0, 1]), np.array([0.5, 0.42, 0.38, 1])
 LED_ON, LED_OFF = np.array([0.25, 1.0, 0.45, 1]), np.array([0.12, 0.14, 0.13, 1])
 
 
@@ -52,6 +54,7 @@ def show_voltage(env):
         v = float(env.data.ctrl[env.adh_ids[i]])
         env.model.geom_rgba[env.model.geom(f"{f}_pad").id] = PAD_OFF + v * (PAD_ON - PAD_OFF)
         env.model.geom_rgba[env.model.geom(f"{f}_led").id] = LED_OFF + v * (LED_ON - LED_OFF)
+        env.model.geom_rgba[env.model.geom(f"{f}_flex").id] = FLEX_OFF + v * (FLEX_ON - FLEX_OFF)
 
 
 def label(im, text, sub):
@@ -85,8 +88,48 @@ def render_view(name, seconds=20.0):
     return frames, info
 
 
-def save_gif(frames, path):
+def render_showcase():
+    """Beauty shots of the model standing on the wall: hero.png, model_views.png, model_turntable.gif."""
+    from crawl_gait import CrawlGait
+    from env import ClimbEnv
+    env = ClimbEnv(tilt_deg=90, randomise=False, fail_prob=0.0)
+    env.reset()
+    gait = CrawlGait(env)
+    for _ in range(60):                                   # mid-step: one foot lifted, its pad switched off
+        env.step(gait(env._foot_contacts()))
+    show_voltage(env)
+    x = env.data.xpos[env.torso, 0]
+    r = mujoco.Renderer(env.model, 1000, 1000)
+
+    def shot(lookat, distance, elevation, azimuth, rotate=90):
+        r.update_scene(env.data, make_camera(lookat, distance, elevation, azimuth))
+        return Image.fromarray(r.render().copy()).rotate(rotate)
+
+    shot((x, 0, 0.06), 0.50, -38, 55).save(OUT / "hero.png")
+    views = [("Whole robot", shot((x, 0, 0.06), 0.52, -38, 55)),
+             ("Top: electronics bay, brain PCB", shot((x + 0.01, 0, 0.14), 0.30, -89.9, 90)),
+             ("Leg: hip servo, thigh plate, knee servo, foot", shot((x - 0.07, -0.08, 0.04), 0.30, -30, 65)),
+             ("Foot: electrode pad, HV driver, ankle", shot((x - 0.105, -0.085, 0.01), 0.15, -50, 40))]
+    sheet = Image.new("RGB", (1000, 1000))
+    for k, (name, im) in enumerate(views):
+        im = im.resize((500, 500), Image.LANCZOS)
+        d = ImageDraw.Draw(im)
+        d.rectangle((0, 0, 500, 30), fill=(20, 22, 26))
+        d.text((10, 7), name, fill=(255, 255, 255), font=FONT)
+        sheet.paste(im, ((k % 2) * 500, (k // 2) * 500))
+    sheet.save(OUT / "model_views.png")
+    small = mujoco.Renderer(env.model, 420, 420)
+    frames = []
+    for az in range(0, 360, 8):                           # turntable: orbit around the wall normal
+        small.update_scene(env.data, make_camera((x, 0, 0.05), 0.55, -32, az))
+        frames.append(Image.fromarray(small.render().copy()))
     pal = [f.convert("P", palette=Image.ADAPTIVE, colors=96) for f in frames]
+    pal[0].save(OUT / "model_turntable.gif", save_all=True, append_images=pal[1:], duration=100, loop=0, optimize=True)
+    print("saved hero.png, model_views.png, model_turntable.gif")
+
+
+def save_gif(frames, path):
+    pal = [f.convert("P", palette=Image.ADAPTIVE, colors=128) for f in frames]
     pal[0].save(path, save_all=True, append_images=pal[1:], duration=FRAME_MS, loop=0, optimize=True)
     print(f"saved {path.name}: {len(frames)} frames, {path.stat().st_size / 1e6:.1f} MB")
 
@@ -98,6 +141,4 @@ if __name__ == "__main__":
         save_gif(frames, OUT / f"climb_wall_{name}.gif")
     frames, _ = render_view("leg", seconds=9.0)
     save_gif(frames, OUT / "leg_closeup.gif")
-    frames, _ = render_view("hero", seconds=6.0)
-    frames[-1].save(OUT / "hero.png")
-    print("saved hero.png")
+    render_showcase()
