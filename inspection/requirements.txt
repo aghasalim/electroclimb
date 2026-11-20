@@ -6,3 +6,5 @@ anthropic
 pypdf
 pydantic
 scipy
+faster-whisper   # only for voice.py --mic
+sounddevice      # only for voice.py --mic

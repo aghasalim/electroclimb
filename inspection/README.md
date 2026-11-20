@@ -111,7 +111,8 @@ Robot: I took 2 photos and found cracks at 19 centimetres.
 
 **How it works, and its limits**
 
-- **Speech out** is the macOS `say` command. **Speech in** is typed text: on a Mac, press the dictation key in the terminal and speak. There is no built-in microphone recogniser yet.
+- **Speech out** is the macOS `say` command. **Speech in** is typed text, or the microphone with `voice.py --mic`: Whisper base.en runs on the Mac, offline after one 145 MB download (`pip install faster-whisper sounddevice`). `voice.py --mictest` checks the recogniser without a microphone: five spoken orders must come back as the right orders.
+- **The robot does not listen while it speaks**, otherwise it would hear itself. Wait until it is quiet, also for "stop". In a noisy room raise the threshold with `--mic-level 0.03`.
 - **Understanding** is a small set of rules for the orders in the table, so it works offline. Other sentences go to Claude (the mission planner for orders, the manual assistant for questions) when a valid API key is set. That path has not been tested live.
 - **The camera is a stand-in.** The simulated wall has no cracks, so each 10 cm band of the wall is given one photo from the held-out part of the crack dataset, and the real CNN classifies it. It shows the pipeline, not the camera.
 - **Climbing down** slips about 1 cm over 20 cm. Targets are reached within about 1 cm.

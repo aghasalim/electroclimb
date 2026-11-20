@@ -2,9 +2,11 @@
 """Talk to the robot while it works (simulation).
 
     ../.venv/bin/python voice.py                  # live: type or dictate, the robot answers out loud
+    ../.venv/bin/python voice.py --mic            # live: speak to the Mac's microphone (Whisper, offline)
     ../.venv/bin/python voice.py --speed 4        # simulation 4x faster than real time
     ../.venv/bin/python voice.py --mute --script "inspect every 10 cm up to 20 cm; +6 stop; +2 status; resume; come down; report"
     ../.venv/bin/python voice.py --selftest
+    ../.venv/bin/python voice.py --mictest        # spoken orders -> text -> orders, no microphone needed
 
 The robot climbs in MuJoCo in real time and listens the whole time, so "stop", "status" or a
 new order work in the middle of a climb. It understands:
@@ -13,8 +15,10 @@ new order work in the middle of a climb. It understands:
     inspect every 10 cm up to 50 cm        photo        stop / resume
     status        check your grip          report       quit
 
-Speech out: macOS `say`. Speech in: this reads typed lines; on a Mac press the dictation key
-(Fn twice, or the microphone key) in the terminal and speak, then Return. Anything the rules
+Speech out: macOS `say`. Speech in: typed lines, or `--mic` for the microphone (Whisper base.en
+through faster-whisper; needs `pip install faster-whisper sounddevice` and downloads the 145 MB
+model once). The microphone is ignored while the robot speaks, so wait for it to finish; in a
+noisy room raise the threshold with `--mic-level 0.03`. Anything the rules
 above don't cover goes to Claude (mission planner, or the manual assistant for questions) when
 a valid ANTHROPIC_API_KEY is set; without one the robot says it did not understand.
 
@@ -86,11 +90,98 @@ def parse(text):
     return None
 
 
+# -- listening (microphone) --------------------------------------------------
+RATE, BLOCK = 16000, 1600    # 16 kHz mono in 0.1 s blocks
+MIC_FLOOR = 0.008            # quietest RMS counted as speech; raise it (--mic-level) in a noisy room
+PROMPT = ("Orders for a climbing robot. Climb to 40 cm. Inspect every 10 cm up to 50 cm. Stop. Resume. "
+          "Status. Check your grip. Photo. Come down. Report.")   # biases Whisper to these words and to digits
+
+
+def utterances(blocks, level, speaking=lambda: False, end_quiet=7, longest=100):
+    """Cut a stream of 0.1 s blocks into spoken sentences: starts when a block is louder than
+    `level`, ends after 0.7 s of quiet. Blocks that arrive while the robot speaks are dropped."""
+    from collections import deque
+    before, heard, quiet = deque(maxlen=3), [], 0
+    for x in blocks:
+        if speaking():
+            before.clear()
+            heard, quiet = [], 0
+            continue
+        loud = float(np.sqrt(np.mean(x ** 2))) > level
+        if not heard and not loud:
+            before.append(x)                          # keep 0.3 s so the first syllable is not cut
+            continue
+        heard = heard or list(before)
+        heard.append(x)
+        quiet = 0 if loud else quiet + 1
+        if quiet >= end_quiet or len(heard) >= longest:
+            yield np.concatenate(heard)
+            before.clear()
+            heard, quiet = [], 0
+
+
+def recogniser():
+    """Whisper base.en on the CPU, offline after the first download (about 145 MB)."""
+    from faster_whisper import WhisperModel
+    model = WhisperModel("base.en", device="cpu", compute_type="int8")
+
+    def to_text(audio):
+        parts, _ = model.transcribe(audio, language="en", initial_prompt=PROMPT, vad_filter=True,
+                                    condition_on_previous_text=False)
+        return " ".join(p.text.strip() for p in parts if p.no_speech_prob < 0.6).strip()
+    return to_text
+
+
+def listen(inbox, voice, level=None):
+    """Thread: microphone -> sentences -> text -> the same inbox the keyboard feeds."""
+    import sounddevice as sd
+    to_text = recogniser()
+    with sd.InputStream(samplerate=RATE, channels=1, dtype="float32", blocksize=BLOCK) as mic:
+        read = lambda: mic.read(BLOCK)[0][:, 0].copy()
+        if level is None:                             # 1 s of room noise sets the threshold
+            room = np.concatenate([read() for _ in range(10)])
+            level = max(MIC_FLOOR, 3 * float(np.sqrt(np.mean(room ** 2))))
+        print(f"(microphone on, speech level {level:.3f}; speak when the robot is quiet)", flush=True)
+        for audio in utterances((read() for _ in iter(int, 1)), level, lambda: voice.speaking):
+            text = to_text(audio)
+            if text:
+                inbox.put(text)
+
+
+def mictest():
+    """Recogniser check without a microphone: `say` speaks three orders into a file, and the
+    cutter, Whisper and the rules must turn them back into the right orders."""
+    import tempfile
+    import wave
+    orders = [("climb to 40 centimetres", ("goto", {"cm": 40.0, "relative": False})),
+              ("inspect every 10 centimetres up to 50", ("inspect", {"step": 10.0, "top": 50.0})),
+              ("stop", ("stop", {})), ("check your grip", ("grip", {})), ("come down", ("goto", {"cm": 0.0, "relative": False}))]
+    stream = [np.zeros(RATE, np.float32)]
+    with tempfile.TemporaryDirectory() as tmp:
+        for text, _ in orders:
+            subprocess.run(["say", "-o", f"{tmp}/a.wav", "--data-format=LEI16@16000", text], check=True)
+            with wave.open(f"{tmp}/a.wav") as fh:
+                stream += [np.frombuffer(fh.readframes(fh.getnframes()), np.int16).astype(np.float32) / 32768,
+                           np.zeros(RATE, np.float32)]
+    stream = np.concatenate(stream)
+    stream += np.random.default_rng(0).normal(0, 0.001, len(stream)).astype(np.float32)   # room hiss
+    blocks = [stream[i:i + BLOCK] for i in range(0, len(stream) - BLOCK, BLOCK)]
+    to_text = recogniser()
+    texts = [to_text(a) for a in utterances(blocks, MIC_FLOOR)]
+    for t in texts:
+        print(f"  heard: {t!r} -> {parse(t)}")
+    assert [parse(t) for t in texts] == [want for _, want in orders], "an order was misheard"
+    silence = list(utterances([np.zeros(BLOCK, np.float32)] * 50, MIC_FLOOR))
+    muted = list(utterances(blocks, MIC_FLOOR, speaking=lambda: True))
+    assert not silence and not muted, "silence or the robot's own voice produced an order"
+    print(f"microphone self-test passes: {len(texts)} spoken orders understood")
+
+
 # -- speaking ----------------------------------------------------------------
 class Voice:
     def __init__(self, mute):
         self.lines, self.last = [], {"You": "", "Robot": ""}
-        self.q = queue.Queue()
+        self.q, self.speaking = queue.Queue(), False
         if not mute and shutil.which("say"):
             threading.Thread(target=self._speak, daemon=True).start()
         else:
@@ -98,7 +189,10 @@ class Voice:
 
     def _speak(self):
         while True:                                   # one sentence at a time, never overlapping
-            subprocess.run(["say", "-r", "190", self.q.get()])
+            text = self.q.get()
+            self.speaking = True                      # the microphone ignores the robot's own voice
+            subprocess.run(["say", "-r", "190", text])
+            self.speaking = not self.q.empty()
 
     def note(self, who, text):
         self.lines.append(f"{who}: {text}")
@@ -340,9 +434,11 @@ def run_script(session, script, on_tick=None):
     return session
 
 
-def run_live(session, speed):
+def run_live(session, speed, mic=False, mic_level=None):
     inbox = queue.Queue()
     threading.Thread(target=lambda: [inbox.put(line) for line in sys.stdin], daemon=True).start()
+    if mic:
+        threading.Thread(target=listen, args=(inbox, session.voice, mic_level), daemon=True).start()
     session.voice.say("Ready on the wall. " + HELP)
     while not session.done:
         start = time.time()
@@ -408,9 +504,12 @@ if __name__ == "__main__":
     opt = lambda name: args[args.index(name) + 1] if name in args else None
     if "--selftest" in args:
         selftest()
+    elif "--mictest" in args:
+        mictest()
     elif "--gif" in args:
         record(opt("--gif"), opt("--script"))
     elif "--script" in args:
         run_script(Session(mute="--mute" in args), opt("--script"))
     else:
-        run_live(Session(mute="--mute" in args), float(opt("--speed") or 1))
+        run_live(Session(mute="--mute" in args), float(opt("--speed") or 1), "--mic" in args,
+                 float(opt("--mic-level")) if opt("--mic-level") else None)
