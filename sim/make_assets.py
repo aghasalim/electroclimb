@@ -26,7 +26,7 @@ import meshkit as mk
 
 HERE = Path(__file__).resolve().parent
 ASSETS = HERE / "assets"
-FONT_FILE = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+FONT_FILE = "/System/Library/Fonts/SFNS.ttf"      # San Francisco, Apple's system font
 THIGH = np.array([0.04, 0.0, -0.07])          # hip axis -> knee axis (thigh frame)
 SHIN = np.array([-0.03, 0.0, -0.06])          # knee axis -> ankle (shin frame)
 LEGS = (("fl", 1, 1), ("fr", 1, -1), ("hl", -1, 1), ("hr", -1, -1))
@@ -34,7 +34,9 @@ LEGS = (("fl", 1, 1), ("fr", 1, -1), ("hl", -1, 1), ("hr", -1, -1))
 
 def font(size):
     try:
-        return ImageFont.truetype(FONT_FILE, size)
+        f = ImageFont.truetype(FONT_FILE, size)
+        f.set_variation_by_name("Bold")
+        return f
     except OSError:
         return ImageFont.load_default(size)
 

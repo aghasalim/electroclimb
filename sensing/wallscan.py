@@ -191,6 +191,12 @@ def plot(results, curves, masks, truth, best):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    from matplotlib import font_manager
+    try:                                              # Apple's system font (San Francisco) when available
+        font_manager.fontManager.addfont("/System/Library/Fonts/SFNS.ttf")
+        plt.rcParams["font.family"] = "System Font"
+    except (OSError, RuntimeError):
+        pass
     pred, pm, _ = best
     fig = plt.figure(figsize=(13, 7.2), dpi=110)
     gs = fig.add_gridspec(3, 6, height_ratios=[1.25, 0.8, 0.8], hspace=0.55, wspace=0.5)
