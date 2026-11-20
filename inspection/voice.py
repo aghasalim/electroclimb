@@ -17,8 +17,9 @@ new order work in the middle of a climb. It understands:
 
 Speech out: macOS `say`. Speech in: typed lines, or `--mic` for the microphone (Whisper base.en
 through faster-whisper; needs `pip install faster-whisper sounddevice` and downloads the 145 MB
-model once). The microphone is ignored while the robot speaks, so wait for it to finish; in a
-noisy room raise the threshold with `--mic-level 0.03`. Anything the rules
+model once). "Stop", "pause", "freeze" and "quit" also work while the robot is talking and cut
+it off (its own voice is subtracted from the microphone first); other orders wait until it is
+quiet. A bare Return always stops it. In a noisy room raise the threshold with `--mic-level 0.03`. Anything the rules
 above don't cover goes to Claude (mission planner, or the manual assistant for questions) when
 a valid ANTHROPIC_API_KEY is set; without one the robot says it did not understand.
 
@@ -34,7 +35,9 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
+import wave
 import time
 from pathlib import Path
 
@@ -90,6 +93,11 @@ def parse(text):
     return None
 
 
+def read_wav(path):
+    with wave.open(str(path)) as fh:
+        return np.frombuffer(fh.readframes(fh.getnframes()), np.int16).astype(np.float32) / 32768
+
+
 # -- listening (microphone) --------------------------------------------------
 RATE, BLOCK = 16000, 1600    # 16 kHz mono in 0.1 s blocks
 MIC_FLOOR = 0.008            # quietest RMS counted as speech; raise it (--mic-level) in a noisy room
@@ -97,27 +105,63 @@ PROMPT = ("Orders for a climbing robot. Climb to 40 cm. Inspect every 10 cm up t
           "Status. Check your grip. Photo. Come down. Report.")   # biases Whisper to these words and to digits
 
 
-def utterances(blocks, level, speaking=lambda: False, end_quiet=7, longest=100):
-    """Cut a stream of 0.1 s blocks into spoken sentences: starts when a block is louder than
-    `level`, ends after 0.7 s of quiet. Blocks that arrive while the robot speaks are dropped."""
+def utterances(blocks, level, speaking=lambda: False, end_quiet=7, longest=100, chunk=15, overlap=5):
+    """Cut a stream of 0.1 s blocks into (audio, robot_was_speaking). A sentence starts when a
+    block is louder than `level` and ends after 0.7 s of quiet. While the robot speaks there is
+    no quiet, so the audio is cut every 1.5 s instead, with 0.5 s overlap so a word is not split."""
     from collections import deque
-    before, heard, quiet = deque(maxlen=3), [], 0
+    before, heard, quiet, during = deque(maxlen=3), [], 0, False
     for x in blocks:
-        if speaking():
-            before.clear()
-            heard, quiet = [], 0
-            continue
+        talk = speaking()
         loud = float(np.sqrt(np.mean(x ** 2))) > level
         if not heard and not loud:
             before.append(x)                          # keep 0.3 s so the first syllable is not cut
             continue
         heard = heard or list(before)
         heard.append(x)
+        during = during or talk
         quiet = 0 if loud else quiet + 1
-        if quiet >= end_quiet or len(heard) >= longest:
-            yield np.concatenate(heard)
+        if quiet >= end_quiet or len(heard) >= (chunk if talk else longest):
+            yield np.concatenate(heard), during
+            heard = heard[-overlap:] if talk and quiet < end_quiet else []
             before.clear()
-            heard, quiet = [], 0
+            quiet, during = 0, bool(heard)
+
+
+def remove_own_voice(mic, said, taps=3200, early=64):
+    """Subtract the robot's own sentence from what the microphone heard. `said` is the audio the
+    robot is playing; the room changes it (delay, loudness, 200 ms of echo), so find the delay by
+    correlation and fit that echo as a filter (Wiener solution). What is left is the person talking."""
+    from scipy.linalg import solve_toeplitz
+    from scipy.signal import fftconvolve
+    if len(said) < taps or len(mic) < 2 * taps:
+        return mic
+    lag = int(np.argmax(np.abs(fftconvolve(mic, said[::-1])))) - (len(said) - 1)   # mic[n] ~ said[n - lag]
+    first = early - lag - (taps - 1)                  # ref[j] = said[first + j]; mic[n] ~ sum h[k] ref[n + taps-1 - k]
+    ref = np.zeros(len(mic) + taps - 1, np.float32)
+    lo, hi = max(first, 0), min(first + len(ref), len(said))
+    if hi <= lo:
+        return mic
+    ref[lo - first:hi - first] = said[lo:hi]
+    auto = fftconvolve(ref, ref[::-1])[len(ref) - 1:len(ref) - 1 + taps]
+    cross = fftconvolve(mic, ref[::-1])[len(mic) - 1:len(mic) - 1 + taps]
+    auto[0] = auto[0] * 1.001 + 1e-6
+    h = solve_toeplitz(auto, cross)
+    return (mic - fftconvolve(ref, h)[taps - 1:taps - 1 + len(mic)]).astype(np.float32)
+
+
+INTERRUPT = ("stop", "freeze", "pause", "quit")      # the only orders accepted over the robot's own voice
+
+
+def barge_in(heard, robot_says):
+    """While the robot talks the microphone also hears the robot. Accept only an interrupt word
+    that the robot is not saying itself ('Stopped at 4 cm' must not stop it)."""
+    own = re.findall(r"[a-z]+", robot_says.lower())
+    for w in re.findall(r"[a-z]+", heard.lower()):
+        for order in INTERRUPT:
+            if w.startswith(order) and not any(o.startswith(order) for o in own):
+                return order
+    return None
 
 
 def recogniser():
@@ -136,23 +180,44 @@ def listen(inbox, voice, level=None):
     """Thread: microphone -> sentences -> text -> the same inbox the keyboard feeds."""
     import sounddevice as sd
     to_text = recogniser()
-    with sd.InputStream(samplerate=RATE, channels=1, dtype="float32", blocksize=BLOCK) as mic:
-        read = lambda: mic.read(BLOCK)[0][:, 0].copy()
-        if level is None:                             # 1 s of room noise sets the threshold
-            room = np.concatenate([read() for _ in range(10)])
-            level = max(MIC_FLOOR, 3 * float(np.sqrt(np.mean(room ** 2))))
-        print(f"(microphone on, speech level {level:.3f}; speak when the robot is quiet)", flush=True)
-        for audio in utterances((read() for _ in iter(int, 1)), level, lambda: voice.speaking):
-            text = to_text(audio)
-            if text:
-                inbox.put(text)
+    last = [0.0]
+
+    def robot_talking():                              # its sound reaches the microphone a little late
+        if voice.speaking:
+            last[0] = time.time()
+        return time.time() - last[0] < 1.0
+
+    while True:
+        try:
+            with sd.InputStream(samplerate=RATE, channels=1, dtype="float32", blocksize=BLOCK) as mic:
+                read = lambda: mic.read(BLOCK)[0][:, 0].copy()
+                rooms = []
+                while level is None:                  # the quietest of 3 seconds, robot silent, sets the threshold
+                    quiet = not robot_talking()
+                    room = np.concatenate([read() for _ in range(10)])
+                    if quiet and not robot_talking():
+                        rooms.append(float(np.sqrt(np.mean(room ** 2))))
+                    if len(rooms) == 3:
+                        level = max(MIC_FLOOR, 3 * min(rooms))
+                        print(f"(microphone on, speech level {level:.3f}; say stop at any time, "
+                              "other orders when the robot is quiet)", flush=True)
+                for audio, during in utterances((read() for _ in iter(int, 1)), level, robot_talking):
+                    if during:                        # the robot is talking: take its voice out first
+                        audio = remove_own_voice(audio, voice.audio)
+                        if float(np.sqrt(np.mean(audio ** 2))) < level:
+                            continue                  # nothing left, so nobody spoke over it
+                        text = barge_in(to_text(audio), voice.now)
+                    else:
+                        text = to_text(audio)
+                    if text:
+                        inbox.put(text)
+        except sd.PortAudioError:                     # macOS restarts audio when playback begins or a device changes
+            time.sleep(0.2)
 
 
 def mictest():
     """Recogniser check without a microphone: `say` speaks three orders into a file, and the
     cutter, Whisper and the rules must turn them back into the right orders."""
-    import tempfile
-    import wave
     orders = [("climb to 40 centimetres", ("goto", {"cm": 40.0, "relative": False})),
               ("inspect every 10 centimetres up to 50", ("inspect", {"step": 10.0, "top": 50.0})),
               ("stop", ("stop", {})), ("check your grip", ("grip", {})), ("come down", ("goto", {"cm": 0.0, "relative": False}))]
@@ -167,13 +232,43 @@ def mictest():
     stream += np.random.default_rng(0).normal(0, 0.001, len(stream)).astype(np.float32)   # room hiss
     blocks = [stream[i:i + BLOCK] for i in range(0, len(stream) - BLOCK, BLOCK)]
     to_text = recogniser()
-    texts = [to_text(a) for a in utterances(blocks, MIC_FLOOR)]
+    texts = [to_text(a) for a, _ in utterances(blocks, MIC_FLOOR)]
     for t in texts:
         print(f"  heard: {t!r} -> {parse(t)}")
     assert [parse(t) for t in texts] == [want for _, want in orders], "an order was misheard"
-    silence = list(utterances([np.zeros(BLOCK, np.float32)] * 50, MIC_FLOOR))
-    muted = list(utterances(blocks, MIC_FLOOR, speaking=lambda: True))
-    assert not silence and not muted, "silence or the robot's own voice produced an order"
+    assert not list(utterances([np.zeros(BLOCK, np.float32)] * 50, MIC_FLOOR)), "silence produced an order"
+
+    def spoken(text, voice):
+        with tempfile.TemporaryDirectory() as tmp:
+            subprocess.run(["say", "-v", voice, "-o", f"{tmp}/a.wav", "--data-format=LEI16@16000", text], check=True)
+            return read_wav(f"{tmp}/a.wav")
+
+    rng = np.random.default_rng(1)
+    room = np.zeros(2600, np.float32)
+    room[[0, 90, 230, 900, 2400]] = 0.6, 0.25, -0.1, 0.08, 0.05   # direct sound and echoes out to 150 ms
+
+    def interrupts(robot_says, user=None, at=1.0):
+        said = spoken(robot_says, "Samantha")
+        mix = np.concatenate([np.zeros(2000, np.float32), np.convolve(said, room)])   # 125 ms late
+        mix += rng.normal(0, 0.001, len(mix)).astype(np.float32)
+        if user:
+            u = spoken(user, "Daniel")[:len(mix) - int(at * RATE)] * 0.5   # quieter than the robot
+            mix[int(at * RATE):int(at * RATE) + len(u)] += u
+        cut = [mix[i:i + BLOCK] for i in range(0, len(mix) - BLOCK, BLOCK)]
+        got = []
+        for a, _ in utterances(cut, MIC_FLOOR, speaking=lambda: True):
+            a = remove_own_voice(a, said)
+            if np.sqrt(np.mean(a ** 2)) > MIC_FLOOR:
+                got.append(barge_in(to_text(a), robot_says))
+        return [g for g in got if g]
+
+    for line in ["Stopped at 4 centimetres. All pads are on.", "Ready on the wall. " + HELP,
+                 "I am at 12 centimetres, climbing to 40. 3 pads are on the wall. The weakest is front-right with 13 newtons."]:
+        assert not interrupts(line), f"the robot interrupted itself with: {line}"
+    long = "I am at 12 centimetres, climbing to 40. 3 pads are on the wall. The weakest is front-right with 13 newtons."
+    heard = [bool(interrupts(long, "stop", at)) for at in (0.5, 1.0, 1.3, 1.8, 2.6, 3.4)]
+    print(f"  stop spoken over the robot at 6 moments: heard {sum(heard)} of 6")
+    assert all(heard), "stop spoken over the robot was not heard"
     print(f"microphone self-test passes: {len(texts)} spoken orders understood")
 
 
@@ -181,7 +276,8 @@ def mictest():
 class Voice:
     def __init__(self, mute):
         self.lines, self.last = [], {"You": "", "Robot": ""}
-        self.q, self.speaking = queue.Queue(), False
+        self.q, self.speaking, self.now, self.proc = queue.Queue(), False, "", None
+        self.audio, self.wav = np.zeros(0, np.float32), str(Path(tempfile.gettempdir()) / f"electroclimb-say-{id(self)}.wav")
         if not mute and shutil.which("say"):
             threading.Thread(target=self._speak, daemon=True).start()
         else:
@@ -189,10 +285,22 @@ class Voice:
 
     def _speak(self):
         while True:                                   # one sentence at a time, never overlapping
-            text = self.q.get()
-            self.speaking = True                      # the microphone ignores the robot's own voice
-            subprocess.run(["say", "-r", "190", text])
+            self.now = self.q.get()                   # the microphone needs to know what the robot says
+            self.speaking = True
+            subprocess.run(["say", "-r", "190", "-o", self.wav, "--data-format=LEI16@16000", self.now])
+            self.audio = read_wav(self.wav)
+            self.proc = subprocess.Popen(["afplay", self.wav])
+            self.proc.wait()
             self.speaking = not self.q.empty()
+
+    def hush(self):
+        """Cut the robot off mid-sentence (it was interrupted)."""
+        if self.q:
+            with contextlib.suppress(queue.Empty):
+                while True:
+                    self.q.get_nowait()
+            if self.proc and self.proc.poll() is None:
+                self.proc.terminate()
 
     def note(self, who, text):
         self.lines.append(f"{who}: {text}")
@@ -300,6 +408,8 @@ class Session:
         if not parsed:
             return
         intent, a = parsed
+        if intent in ("quit", "stop"):
+            v.hush()
         if intent == "quit":
             v.say("Goodbye.")
             self.done = True
@@ -443,9 +553,7 @@ def run_live(session, speed, mic=False, mic_level=None):
     while not session.done:
         start = time.time()
         while not inbox.empty():
-            line = inbox.get().strip()
-            if line:
-                session.hear(line)
+            session.hear(inbox.get().strip() or "stop")   # a bare Return is the sure stop
         session.tick()
         time.sleep(max(0.0, session.robot.dt / speed - (time.time() - start)))
     time.sleep(2.5)                                   # let the last sentence finish
