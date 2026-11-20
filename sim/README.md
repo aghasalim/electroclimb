@@ -196,3 +196,19 @@ All on the 40 hard test walls with split pads, trained on the second Mac (M5 Max
 ```bash
 ../.venv/bin/python balance.py figure
 ```
+
+**Body lean, tested and rejected.** `LEAN` in `crawl_gait.py` leans the body sideways on the abduction joints while a leg swings (default 0 = off). On the 40 hard walls, split pads:
+
+| Lean | Success | Falls |
+|---|---|---|
+| none | 88 % | 12 % |
+| 0.1 rad away from the swing leg | 82 % | 12 % |
+| 0.2 rad away | 57 % | 28 % |
+| 0.1 rad towards | 78 % | 18 % |
+| 0.2 rad towards | 60 % | 12 % |
+
+On a vertical wall a sideways shift does not change the pad pressures, so there is little to gain, and tilting the pads on their ankles costs grip.
+
+```bash
+../.venv/bin/python eval_gait.py '{}' '{"LEAN": 0.1}' '{"LEAN": -0.1}'
+```
