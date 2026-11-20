@@ -146,7 +146,7 @@ Job 2 makes job 1 harder: the pads that are pulled press less on the wall, so th
 
 - **Lifting one leg costs about 15 points of grip.** That is the price of every step.
 - **Lifting an upper leg is the worst case.** One upper pad then holds the whole tipping lever alone.
-- **The body does not lean.** When a leg lifts, the centre of mass sits exactly on the edge of the support triangle (the dots in the figure). A walking robot on the floor would shift its body over the triangle first. The gait does not do that yet; it is the next thing to try, and it costs no hardware.
+- **Leaning the body does not help on a wall.** When a leg lifts, the centre of mass sits exactly on the edge of the support triangle (the dots in the figure). On a floor a robot would shift its body over the triangle first. On a vertical wall a sideways shift cannot change how hard the pads press, because the weight points along the wall; it only moves shear between pads. The force model promised at most 4 points, the MuJoCo stance test showed nothing outside its ±2 point scatter, and in the full gait a lean made things worse (88 % → 82 % success at 0.1 rad, 57 % at 0.2 rad). The gait keeps the body centred.
 - **Overhangs are harder than walls.** The force model puts the worst angle at about 120–130° (leaning back past vertical): 47 % grip on four pads and 74 % with an upper leg lifted. On a ceiling it is 24 % and 48 %.
 - **Near the floor the triangle rule comes back.** With a front leg lifted the robot needs no adhesion up to about 35° of slope. With a hind leg lifted it needs some from 5°, because gravity pulls the body towards the missing corner.
 

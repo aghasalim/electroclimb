@@ -22,6 +22,8 @@ LIFT = 0.025                         # m, swing height
 MAX_PRESS = 0.05                     # m, how far a foot may reach below stance to find the wall
 PHASES = [("release", 0.10), ("lift", 0.15), ("swing", 0.25), ("place", 0.25), ("stick", 0.15)]
 SHIFT_S = 0.8                        # s, body pull-up
+LEAN = 0.0                           # rad, sideways body lean on the abduction joints while a leg swings
+                                     # (+ = away from the swing leg). Tested, no gain on a wall: sim/README.md
 
 
 def smooth(t):
@@ -82,6 +84,7 @@ class CrawlGait:
         self.press = 0.0                              # m, stance feet push into the wall while one swings
         self.leg_pref = np.zeros(4)                   # per-leg bias, picks which leg steps next
         self.cycle_order = []
+        self.lean = 0.0                               # 0..1, how far the lean is ramped in
         self.offset = {f: np.zeros(2) for f in FEET}  # foot x/z offset from home (body frame)
         self.q = {f: STAND[3 * i + 1: 3 * i + 3].copy() for i, f in enumerate(FEET)}
         self.half = (env.jnt_hi - env.jnt_lo) / 2
@@ -100,6 +103,8 @@ class CrawlGait:
             target = self.ik.home[f][[0, 2]] + self.offset[f] + [0.0, self.lower]
             if swing is not None and f != swing:
                 target[1] -= self.press
+            if swing is not None and LEAN:
+                a[3 * i] = (1 if swing[1] == "l" else -1) * LEAN * self.lean / self.half[3 * i]
             self.q[f] = self.ik.solve(f, target, self.q[f])
             for k, j in enumerate((1, 2)):           # hip, knee
                 a[3 * i + j] = (self.q[f][k] - STAND[3 * i + j]) / self.half[3 * i + j]
@@ -145,6 +150,7 @@ class CrawlGait:
             if s is not None:
                 if name == "release":
                     volts[i] = 1 - s
+                    self.lean = s
                 elif name == "lift":
                     volts[i] = 0
                     self.offset[leg][1] = max(self.offset[leg][1], LIFT * s)
@@ -157,6 +163,7 @@ class CrawlGait:
                         self.offset[leg][1] = max(self.offset[leg][1] - 0.002, -MAX_PRESS)
                 elif name == "stick":
                     volts[i] = s
+                    self.lean = 1 - s
             start += dur
         return self._targets_to_action(volts, swing=leg)
 
