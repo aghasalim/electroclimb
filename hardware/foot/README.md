@@ -2,6 +2,8 @@
 
 > ⚠️ **High voltage.** The foot runs at 1–3 kV. The current is limited to microamps, but a charged pad or capacitor can still give a painful shock and damage electronics. Build and test only with a supervisor, behind the interlock described below, and discharge everything before touching it.
 
+**To build one: follow [`BUILD.md`](BUILD.md)** (CAD files, parts list with prices, print settings, assembly and three test levels).
+
 Goal of stage 1: one foot that **holds reliably on concrete, glass and wood** and **measures its own grip**, plus a test rig that produces the data for the adhesion model used in simulation.
 
 ## 1. How big does a foot have to be?
