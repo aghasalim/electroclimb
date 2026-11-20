@@ -17,7 +17,20 @@ from PIL import Image, ImageDraw
 from crawl_gait import climb
 
 from PIL import ImageFont
-FONT = ImageFont.load_default(13)
+APPLE_FONT = "/System/Library/Fonts/SFNS.ttf"      # San Francisco, Apple's system font
+
+
+def apple_font(size, weight="Semibold"):
+    """Apple's system font; falls back to PIL's default on machines without it."""
+    try:
+        f = ImageFont.truetype(APPLE_FONT, size)
+        f.set_variation_by_name(weight)
+        return f
+    except OSError:
+        return ImageFont.load_default(size)
+
+
+FONT = apple_font(13)
 OUT = Path(__file__).resolve().parent.parent / "media"
 W = H = 480
 EVERY = 6            # grab every 6th control step (0.12 s) ...
