@@ -75,7 +75,7 @@ cd sensing
 
 ## Next steps
 
-1. **Bench test:** an 8-strip pad on the stage 1 test rig, an LCR meter or capacitance-to-digital chip, and concrete samples with known voids, moisture and rebar. No high voltage at first.
+1. **Bench test:** an 8-strip pad on concrete samples with a known void, wet zone and steel bar, no high voltage. Everything is prepared: Gerber files, predicted readings, a results sheet and an analysis script ([`hardware/foot/BUILD.md`](../hardware/foot/BUILD.md), level 1). The far-pair signals are only hundredths of a picofarad, so the measurement itself is the first hurdle.
 2. **Add the holding voltage** and measure how much the readings degrade.
 3. **3D field model** fitted to the bench data; retrain the network on it.
 4. **Active sensing in the RL environment:** add the scan to the simulated robot and reward uncertainty reduction.

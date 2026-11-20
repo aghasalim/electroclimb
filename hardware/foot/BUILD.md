@@ -23,7 +23,9 @@ A step-by-step guide to build and test **one ElectroClimb foot**. It is split in
 | [`cad/foot_assembly.step`](cad/foot_assembly.step) | Both parts in place |
 | [`cad/foot_cad.py`](cad/foot_cad.py) | The parametric source (CadQuery). Change `PARAMS`, re-run, the checks run again. |
 | [`electroclimb.pretty/EA_Pad_80x60_F1_G1.kicad_mod`](electroclimb.pretty/) | Adhesion pad: two interdigitated combs, 1 mm fingers and gaps |
-| [`electroclimb.pretty/WS_Pad_80x60_S8_G2.kicad_mod`](electroclimb.pretty/) | WallScan test pad: 8 separate strips, 7.75 mm wide, 2 mm apart |
+| [`electroclimb.pretty/WS_Pad_80x60_S8_W7_G2.kicad_mod`](electroclimb.pretty/) | WallScan test pad: 8 separate strips, 7 mm wide, 2 mm apart, 52 mm long |
+| [`fab/EA_Pad_80x60_F1_G1.zip`](fab/EA_Pad_80x60_F1_G1.zip), [`fab/WS_Pad_80x60_S8_W7_G2.zip`](fab/WS_Pad_80x60_S8_W7_G2.zip) | **Order-ready Gerber files** for both pads: copper, coverlay openings, outline. Upload the zip to the PCB maker. |
+| [`../../sensing/bench.py`](../../sensing/bench.py), [`bench_results_template.csv`](../../sensing/bench_results_template.csv) | Predictions for the level 1 test, the sheet to fill in and the script that analyses it |
 
 ## Parts
 
@@ -72,14 +74,43 @@ The neck is the ankle spring. With TPU at E ≈ 26 MPa its bending stiffness is 
 
 Goal: find out whether the pair capacitances really change over a void, water and steel, as the simulation says.
 
-1. Make three concrete samples about 20 mm thick, or use paving slabs: one plain, one with a 3 mm air gap behind a 5 mm layer (two tiles with spacers), one with a steel bar close under the surface. For moisture, wet a patch of the plain sample and let the surface dry.
-2. Lay the 8-strip pad on the sample with a 1 kg weight on the carrier.
-3. Measure the capacitance between strip pairs 1–2, 1–3, 1–5 and 1–8 with the LCR meter at 10 kHz and 100 kHz. Repeat on each sample, five times each, lifting and replacing the pad every time.
-4. Write the results into a table.
+**Order:** upload [`fab/WS_Pad_80x60_S8_W7_G2.zip`](fab/WS_Pad_80x60_S8_W7_G2.zip) to the PCB maker. Options to choose: flexible PCB, 1 layer, polyimide, 18 µm copper, polyimide coverlay, no stiffener, 5 pieces.
 
-**What counts as a result:** the simulation predicts changes of tens of percent on the far pairs (1–5, 1–8) over a shallow void. If the differences between samples are larger than the spread between your five repeats, the idea survives its first test. If the repeats scatter more than the samples differ, the contact layer dominates, and that is the answer.
+**Samples** (about 150 × 150 mm each):
 
-Note: this test pad has 7.75 mm strips; the simulation used 5 mm strips on a 60 mm pad. Re-run [`sensing/wallscan.py`](../../sensing/wallscan.py) with the real geometry before comparing numbers.
+| Name | How to make it |
+|---|---|
+| `plain` | A concrete paving slab, about 40 mm thick, dry. |
+| `void` | A 5 mm fibre-cement or thin concrete tile on the slab with 3 mm spacers at the corners: an air gap 5 mm under the surface. |
+| `steel` | A 10 mm steel bar in a groove so its top is 8 mm under the surface, or under an 8 mm tile. Bar under the middle of the pad, parallel to the strips. |
+| `wet` | The plain slab with a 30 mm wide strip soaked for an hour, surface wiped dry. Strip under the middle of the pad, parallel to the strips. |
+
+**Measure:**
+1. Lay the pad on the sample, strips down, with the carrier and a 1 kg weight on top. Strips are numbered 1 to 8 from one side.
+2. Measure the capacitance between strip pairs 1–2, 1–3, 1–5, 1–8 and 4–5 at 10 kHz. Leave the other strips unconnected in the same way every time.
+3. Five repeats per sample: lift the pad and put it back each time.
+4. Type the values into a copy of [`bench_results_template.csv`](../../sensing/bench_results_template.csv), then run:
+
+```bash
+cd sensing
+../.venv/bin/python bench.py analyze my_results.csv
+```
+
+**What the field model predicts** (`bench.py predict`; 2D, ideal, so expect differences):
+
+| Pair | plain | void | steel | wet |
+|---|---|---|---|---|
+| 1–2 | 2.00 pF | +1 % | 0 % | −2 % |
+| 1–3 | 0.30 pF | **−32 %** | −2 % | +3 % |
+| 1–5 | 0.07 pF | **−50 %** | **+22 %** | **+56 %** |
+| 1–8 | 0.02 pF | **−33 %** | +7 % | −12 % |
+| 4–5 | 1.87 pF | +3 % | −1 % | **+14 %** |
+
+How the pad happens to sit changes the neighbour pairs by about 6 % and the far pairs by about 2 % in the model.
+
+**This is a hard measurement.** The interesting signals are hundredths of a picofarad, and a metre of ordinary cable has about 100 pF. Use short shielded leads, zero the meter with the leads in place and the pad lifted, and keep hands and cables still. Start with pair 1–3 on `void`: 0.3 pF changing by a third is the easiest prediction to check. If the lab meter cannot resolve 0.01 pF, a capacitance-to-digital chip (FDC2214, AD7746) right next to the pad is the next step.
+
+**What counts as a result:** `bench.py analyze` marks a sample/pair as CLEAR when its change against `plain` is more than three times the spread between repeats. If the far pairs come out clear and roughly in the predicted direction, the idea survived its first test. If the repeats scatter more than the samples differ, the contact layer or the cabling dominates, and that is the answer.
 
 ## Level 2: hold test (lab high-voltage supply)
 
