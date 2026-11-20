@@ -4,3 +4,5 @@ pillow
 gymnasium
 stable-baselines3>=2.3
 torch
+scipy        # balance.py
+matplotlib   # balance.py figure

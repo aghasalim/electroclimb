@@ -125,6 +125,38 @@ F_peel = m·g · h / L = 14.3 N × 9 cm / 20 cm ≈ 6.4 N
 
 This is why the robot crouches. The first design stood 16 cm off the wall and the upper feet kept peeling; at 9 cm the force is almost halved. It is also why lifting an **upper** foot is the riskiest moment of the gait.
 
+## Gravity and balance: standing on three legs
+
+On a floor, a robot balances when its centre of mass is above the triangle of its three standing feet. On a wall that rule no longer works: gravity pulls **along** the surface, so nothing balances by itself and the pads have to do two jobs at once.
+
+<p align="center"><img src="../media/balance.png" width="900" alt="Pad pressures in each stance, grip needed from floor to ceiling, and pad pressure through one gait cycle"></p>
+
+1. **Carry the weight by friction.** Each pad can carry shear up to 0.6 × how hard it presses on the wall.
+2. **Stop the body tipping backwards.** The centre of mass sits 7.7 cm off the wall, so the 14.3 N weight is a lever that pulls the upper pads off the wall and pushes the lower pads into it.
+
+Job 2 makes job 1 harder: the pads that are pulled press less on the wall, so they have less friction. With all four pads at 15 N, the upper pads press with 13 N and the lower ones with 17 N.
+
+[`sim/balance.py`](../sim/balance.py) answers "how much grip does each stance need?" in two independent ways: a rigid-body force model (force and moment balance on point pads, solved as a small linear program) and the MuJoCo simulation, where the robot stands in the stance and the grip is lowered until it lets go.
+
+| Stance on a vertical wall | Grip needed, force model | Grip needed, MuJoCo | Weakest pad at 100 % grip |
+|---|---|---|---|
+| All four pads down | 41 % | 41 % | upper pads, 13 N |
+| A hind (lower) leg lifted | 55 % | 56 % | upper pad on the other side, 12 N |
+| A front (upper) leg lifted | 58 % | 58 % | the one upper pad left, 12 N |
+
+- **Lifting one leg costs about 15 points of grip.** That is the price of every step.
+- **Lifting an upper leg is the worst case.** One upper pad then holds the whole tipping lever alone.
+- **The body does not lean.** When a leg lifts, the centre of mass sits exactly on the edge of the support triangle (the dots in the figure). A walking robot on the floor would shift its body over the triangle first. The gait does not do that yet; it is the next thing to try, and it costs no hardware.
+- **Overhangs are harder than walls.** The force model puts the worst angle at about 120–130° (leaning back past vertical): 47 % grip on four pads and 74 % with an upper leg lifted. On a ceiling it is 24 % and 48 %.
+- **Near the floor the triangle rule comes back.** With a front leg lifted the robot needs no adhesion up to about 35° of slope. With a hind leg lifted it needs some from 5°, because gravity pulls the body towards the missing corner.
+
+The force model treats each pad as a point. Real pads are 80 × 60 mm and their spring ankles carry a little moment, which is why MuJoCo spreads the load more evenly (12 N instead of the model's 9 N on the weakest pad). Both rest on the 15 N per pad placeholder and a friction of 0.6; the hold test in [`hardware/foot/BUILD.md`](../hardware/foot/BUILD.md) replaces those with measured values.
+
+```bash
+cd sim
+../.venv/bin/python balance.py figure    # tables, self-check, media/balance.png
+```
+
 ## High-voltage driver (one per pad half)
 
 ```mermaid
