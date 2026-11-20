@@ -206,7 +206,10 @@ def listen(inbox, voice, level=None):
                         audio = remove_own_voice(audio, voice.audio)
                         if float(np.sqrt(np.mean(audio ** 2))) < level:
                             continue                  # nothing left, so nobody spoke over it
-                        text = barge_in(to_text(audio), voice.now)
+                        over = to_text(audio)
+                        text = barge_in(over, voice.now)
+                        if over and not text:         # shown, so a missed "stop" can be diagnosed
+                            print(f"(heard while speaking, ignored: {over})", flush=True)
                     else:
                         text = to_text(audio)
                     if text:
