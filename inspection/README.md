@@ -67,3 +67,52 @@ Claude turns an operator's sentence into a mission plan (structured output: wayp
 ```
 
 Tested with a saved plan (inspect at 10 cm, pass 15 cm, inspect at 20 cm): reached 13.6, 18.1 and 22.7 cm (the gait finishes its 4 cm cycle first), and slipped 0.03 cm during each 2 s hold. A plan to 150 cm is rejected.
+
+## Talking to the robot ([`voice.py`](voice.py))
+
+The robot climbs in MuJoCo in real time and listens the whole time, so an order, a question or "stop" works in the middle of a climb. It answers out loud.
+
+<p align="center"><img src="../media/voice_mission.gif" width="340" alt="Voice mission in simulation: inspect, stop, resume, grip check, come down, report"></p>
+
+```bash
+../.venv/bin/python voice.py                 # live; add --speed 4 to run faster than real time
+../.venv/bin/python voice.py --selftest
+```
+
+| You say | The robot does |
+|---|---|
+| "climb to 40 cm", "climb another 20 cm" | climbs there and shortens its last step to stop on the target |
+| "come down", "come down to 10 cm" | climbs down (new: the gait runs backwards) |
+| "inspect every 10 cm up to 50 cm" | stops at each height on four pads, takes a photo, says "crack found" or "no crack" |
+| "photo" | takes a photo where it is |
+| "stop", "resume" | freezes at once with every pad on; carries on |
+| "status", "check your grip", "why did you stop?" | height, what it is doing, how hard each pad presses on the wall |
+| "report" | says a summary and writes `missions/voice-…/report.md` with findings and the transcript |
+
+A recorded run:
+
+```
+You: inspect every 10 cm up to 20 cm
+Robot: I will take 2 photos, every 10 centimetres up to 20.
+You: stop
+Robot: Stopped at 4 centimetres. All pads are on.
+You: why did you stop
+Robot: You told me to stop.
+You: resume
+Robot: No crack at 10 centimetres. I am 100 percent sure.
+Robot: Crack found at 19 centimetres. I am 100 percent sure.
+You: check your grip
+Robot: front-left 13, front-right 13, hind-left 16, hind-right 17 newtons. All four pads hold.
+You: come down
+Robot: Done. I am at -1 centimetres with all four pads on.
+You: report
+Robot: I took 2 photos and found cracks at 19 centimetres.
+```
+
+**How it works, and its limits**
+
+- **Speech out** is the macOS `say` command. **Speech in** is typed text: on a Mac, press the dictation key in the terminal and speak. There is no built-in microphone recogniser yet.
+- **Understanding** is a small set of rules for the orders in the table, so it works offline. Other sentences go to Claude (the mission planner for orders, the manual assistant for questions) when a valid API key is set. That path has not been tested live.
+- **The camera is a stand-in.** The simulated wall has no cracks, so each 10 cm band of the wall is given one photo from the held-out part of the crack dataset, and the real CNN classifies it. It shows the pipeline, not the camera.
+- **Climbing down** slips about 1 cm over 20 cm. Targets are reached within about 1 cm.
+- Simulation only. On the real robot this would run on a laptop or phone that talks to the robot.
