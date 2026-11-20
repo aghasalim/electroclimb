@@ -1,0 +1,416 @@
+#!/usr/bin/env python3
+"""Talk to the robot while it works (simulation).
+
+    ../.venv/bin/python voice.py                  # live: type or dictate, the robot answers out loud
+    ../.venv/bin/python voice.py --speed 4        # simulation 4x faster than real time
+    ../.venv/bin/python voice.py --mute --script "inspect every 10 cm up to 20 cm; +6 stop; +2 status; resume; come down; report"
+    ../.venv/bin/python voice.py --selftest
+
+The robot climbs in MuJoCo in real time and listens the whole time, so "stop", "status" or a
+new order work in the middle of a climb. It understands:
+
+    climb to 40 cm / climb 20 cm / come down / come down to 10 cm
+    inspect every 10 cm up to 50 cm        photo        stop / resume
+    status        check your grip          report       quit
+
+Speech out: macOS `say`. Speech in: this reads typed lines; on a Mac press the dictation key
+(Fn twice, or the microphone key) in the terminal and speak, then Return. Anything the rules
+above don't cover goes to Claude (mission planner, or the manual assistant for questions) when
+a valid ANTHROPIC_API_KEY is set; without one the robot says it did not understand.
+
+In simulation the wall has no real cracks, so the camera is a stand-in: each 10 cm band of
+the wall is given one photo from the held-out part of the crack dataset (data/cracks, seeded),
+and the real crack CNN classifies it. Without the dataset, photos are saved but not checked.
+"""
+import contextlib
+import io
+import json
+import queue
+import re
+import shutil
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+
+import numpy as np
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent / "sim"))
+
+import crawl_gait  # noqa: E402
+from env import FEET, ClimbEnv  # noqa: E402
+
+MAX_CM = 100.0               # test wall, same limit as mission.py
+STRIDE = 0.04                # m per gait cycle
+BAND_CM = 10                 # the stand-in wall has one photo per band
+LEG = {"fl": "front-left", "fr": "front-right", "hl": "hind-left", "hr": "hind-right"}
+HELP = "Try: climb to 40 centimetres, inspect every 10 centimetres up to 50, photo, stop, resume, status, come down, report."
+
+
+# -- understanding -----------------------------------------------------------
+def cm(number, unit):
+    return float(number) * (100 if unit and unit.startswith("m") and not unit.startswith("mm") else 1)
+
+
+def parse(text):
+    """Sentence -> (intent, arguments). Rules only; None means 'ask Claude or give up'."""
+    t = text.lower().strip().rstrip(".!")
+    nums = [cm(n, u) for n, u in re.findall(r"(\d+(?:\.\d+)?)\s*(centi\w*|cm|met\w*|m\b)?", t)]
+    has = lambda *words: any(re.search(rf"\b{w}", t) for w in words)
+    if has("quit", "exit", "bye", "goodbye"):
+        return "quit", {}
+    if has("why"):
+        return "why", {}
+    if has("stop", "freeze", "hold", "wait", "pause"):
+        return "stop", {}
+    if has("resume", "continue", "carry on", "go on", "keep going"):
+        return "resume", {}
+    if has("every") and len(nums) >= 2:
+        return "inspect", {"step": nums[0], "top": nums[1]}
+    if has("status", "where are", "how high", "how far", "position"):
+        return "status", {}
+    if has("grip", "pads", "self.?check"):
+        return "grip", {}
+    if has("report", "summary", "what did you find", "findings"):
+        return "report", {}
+    if has("come down", "go down", "descend", "climb down", "back down", "return", "come back", "home"):
+        return "goto", {"cm": nums[0] if nums else 0.0, "relative": False}
+    if has("climb", "go up", "up", "higher", "go to", "move"):
+        if not nums:
+            return None
+        return "goto", {"cm": nums[0], "relative": not has("to") or has("another", "more")}
+    if has("photo", "picture", "look", "inspect", "check"):
+        return "photo", {}
+    return None
+
+
+# -- speaking ----------------------------------------------------------------
+class Voice:
+    def __init__(self, mute):
+        self.lines, self.last = [], {"You": "", "Robot": ""}
+        self.q = queue.Queue()
+        if not mute and shutil.which("say"):
+            threading.Thread(target=self._speak, daemon=True).start()
+        else:
+            self.q = None
+
+    def _speak(self):
+        while True:                                   # one sentence at a time, never overlapping
+            subprocess.run(["say", "-r", "190", self.q.get()])
+
+    def note(self, who, text):
+        self.lines.append(f"{who}: {text}")
+        self.last[who] = text
+        print(f"{who}: {text}", flush=True)
+
+    def say(self, text):
+        self.note("Robot", text)
+        if self.q:
+            self.q.put(text)
+
+
+# -- the camera stand-in and the crack detector ------------------------------
+class Camera:
+    def __init__(self, seed=3):
+        self.seed, self.model, self.pools = seed, None, None
+        try:
+            import torch
+            from torch.utils.data import random_split
+            import crack_model
+            items = crack_model.Cracks().items
+            if len(items) == 40_000:                  # same fixed split as training: use only the held-out part
+                test = random_split(range(40_000), [32_000, 4_000, 4_000], generator=torch.Generator().manual_seed(0))[2]
+                self.pools = {k: [items[i][0] for i in test.indices if items[i][1] == k] for k in (0, 1)}
+                self.model, self.cm = crack_model.load_model(), crack_model
+        except (ImportError, FileNotFoundError):
+            pass
+
+    def shoot(self, height_cm, out):
+        """Photo of the wall at this height -> finding dict, or None without the dataset."""
+        if not self.model:
+            return None
+        import torch
+        from PIL import Image
+        band = int(round(height_cm / BAND_CM))        # nearest band
+        rng = np.random.default_rng(self.seed * 1000 + band)
+        truth = int(rng.random() < 0.3)               # 30 % of the bands are cracked
+        src = self.pools[truth][rng.integers(len(self.pools[truth]))]
+        img = Image.open(src)
+        with torch.no_grad():
+            p = float(torch.sigmoid(self.model(self.cm.to_tensor(img)[None]).squeeze()))
+        name = f"photo_{height_cm:05.1f}cm.jpg"
+        img.save(out / name)
+        return {"height_cm": round(height_cm, 1), "crack_tiles": int(p > 0.5), "probability": round(p, 3),
+                "photo": name, "truth": bool(truth)}
+
+
+# -- the robot ---------------------------------------------------------------
+class Robot:
+    def __init__(self):
+        self.env = ClimbEnv(tilt_deg=90, randomise=False, fail_prob=0.0, episode_s=1e6)
+        self.env.reset()
+        self.gait = crawl_gait.CrawlGait(self.env)
+        self.dt = self.env.model.opt.timestep * self.env.frame_skip
+        self.todo = []                                # waypoints: (height_cm, take a photo there?)
+        self.frozen, self.fell, self.t = False, False, 0.0
+        self.action = np.concatenate([np.zeros(12), np.ones(4)])
+
+    @property
+    def height(self):
+        return (self.env.data.xpos[self.env.torso, 0] - self.env.start_x) * 100
+
+    @property
+    def at(self):
+        return int(round(self.height)) + 0            # whole centimetres for speech, never "-0"
+
+    def pressures(self):
+        from balance import pad_loads
+        return pad_loads(self.env)[0]
+
+    def step(self):
+        """One control step (20 ms). Returns a waypoint when the robot has just arrived at it."""
+        arrived = None
+        moving = self.todo and not self.frozen
+        boundary = (self.gait.t % self.gait.cycle) < self.dt * 1.5
+        if moving and boundary:                       # between gait cycles: all four pads down
+            left = (self.todo[0][0] - self.height) / 100
+            if abs(left) < 0.01:
+                arrived, moving = self.todo.pop(0), False
+            else:                                     # shorten the last stride so it stops at the target
+                crawl_gait.STRIDE = float(np.clip(left, -STRIDE, STRIDE))
+        if moving:
+            self.action = self.gait(self.env._foot_contacts())
+        else:
+            self.action[12:] = 1.0                    # standing still: every pad on
+        self.env.step(self.action)
+        self.t += self.dt
+        z = self.env.data.xpos[self.env.torso, 2]
+        self.fell = bool(z > 0.35 or z < 0.02)
+        return arrived
+
+
+class Session:
+    def __init__(self, mute=False, out=None):
+        self.out = out or HERE / "missions" / time.strftime("voice-%Y%m%d-%H%M%S")
+        self.out.mkdir(parents=True, exist_ok=True)
+        self.voice, self.robot, self.camera = Voice(mute), Robot(), Camera()
+        self.findings, self.why, self.llm, self.done = [], "I have not been given a job yet.", None, False
+
+    # what the robot does with a sentence
+    def hear(self, text):
+        v, r = self.voice, self.robot
+        v.note("You", text)
+        parsed = parse(text) or self.ask_claude(text)
+        if not parsed:
+            return
+        intent, a = parsed
+        if intent == "quit":
+            v.say("Goodbye.")
+            self.done = True
+        elif intent == "stop":
+            r.frozen, self.why = True, "You told me to stop."
+            v.say(f"Stopped at {r.at} centimetres. All pads are on.")
+        elif intent == "resume":
+            r.frozen = False
+            v.say("Continuing." if r.todo else "Nothing left to do. Give me a new order.")
+        elif intent == "goto":
+            target = r.height + a["cm"] if a["relative"] else a["cm"]
+            capped = float(np.clip(target, 0, MAX_CM))
+            r.todo, r.frozen = [(capped, False)], False
+            limit = f" The wall ends at {MAX_CM:.0f} centimetres, so I go to {capped:.0f}." if capped != target else ""
+            way = "Climbing" if capped > r.height else "Coming down"
+            v.say(f"{way} to {capped:.0f} centimetres. About {abs(capped - r.height) / 0.9:.0f} seconds.{limit}")
+        elif intent == "inspect":
+            top, step = min(a["top"], MAX_CM), max(a["step"], 2.0)
+            stops = [h for h in np.arange(step, top + 0.01, step) if h > r.height + 1]
+            if not stops:
+                return v.say("I am already above that. Tell me to come down first.")
+            r.todo, r.frozen = [(float(h), True) for h in stops], False
+            v.say(f"I will take {len(stops)} photos, every {step:.0f} centimetres up to {stops[-1]:.0f}.")
+        elif intent == "photo":
+            self.photo()
+        elif intent == "status":
+            p = r.pressures()
+            doing = "stopped" if r.frozen else f"heading to {r.todo[0][0]:.0f} centimetres" if r.todo else "waiting"
+            weak = int(np.argmin(np.where(p > 0, p, np.inf))) if (p > 0).any() else 0
+            v.say(f"I am at {r.at} centimetres, {doing}. {int((p > 0).sum())} pads are on the wall. "
+                  f"The weakest is {LEG[FEET[weak]]} with {p[weak]:.0f} newtons.")
+        elif intent == "why":
+            v.say(self.why)
+        elif intent == "grip":
+            p = r.pressures()
+            v.say(", ".join(f"{LEG[f]} {x:.0f}" for f, x in zip(FEET, p)) + " newtons. "
+                  + ("All four pads hold." if (p > 3).all() else "A pad is weak or in the air; I would not climb yet."))
+        elif intent == "report":
+            self.report()
+
+    def ask_claude(self, text):
+        """Free sentences: questions go to the manual assistant, orders to the mission planner."""
+        v = self.voice
+        try:
+            if self.llm is False:
+                raise SystemExit
+            if re.match(r"(what|how|is|are|should|does|do|can|which|when)\b", text.lower()) or text.endswith("?"):
+                import rag
+                answer, sources = rag.answer(text, rag.load().search(text))
+                self.llm = True
+                v.say(" ".join(re.split(r"(?<=[.!?])\s+", re.sub(r"\s*\[\d+\]", "", answer))[:2]))
+                print("   sources:", "; ".join(sources))
+                return None
+            import mission
+            plan = mission.plan_with_claude(text)
+            self.llm = True
+            self.robot.todo = [(w.height_cm, w.action == "inspect") for w in plan.waypoints]
+            self.robot.frozen = False
+            v.say(plan.summary)
+        except (SystemExit, FileNotFoundError, Exception) as e:    # no key, no index, network: stay usable
+            if self.llm is None:
+                self.llm = False
+            if not isinstance(e, SystemExit):
+                print(f"   (Claude call failed: {type(e).__name__})")
+            v.say("I did not understand that. " + HELP)
+        return None
+
+    def photo(self):
+        r, v = self.robot, self.voice
+        f = self.camera.shoot(r.height, self.out)
+        if f is None:
+            return v.say(f"Photo taken at {r.at} centimetres. The crack check needs the dataset, so I did not check it.")
+        self.findings = [x for x in self.findings if round(x["height_cm"] / BAND_CM) != round(f["height_cm"] / BAND_CM)] + [f]
+        (self.out / "findings.json").write_text(json.dumps(self.findings, indent=1))
+        sure = f["probability"] if f["crack_tiles"] else 1 - f["probability"]
+        v.say(f"{'Crack found' if f['crack_tiles'] else 'No crack'} at {f['height_cm']:.0f} centimetres. "
+              f"I am {sure * 100:.0f} percent sure.")
+
+    def report(self):
+        v = self.voice
+        cracks = sorted(f["height_cm"] for f in self.findings if f["crack_tiles"])
+        if not self.findings:
+            v.say("No photos yet, so there is nothing to report.")
+        elif cracks:
+            v.say(f"I took {len(self.findings)} photos and found cracks at " + ", ".join(f"{h:.0f}" for h in cracks) + " centimetres.")
+        else:
+            v.say(f"I took {len(self.findings)} photos and found no cracks.")
+        md = ["# Voice mission report", "", "| Height | Result | Confidence | Photo |", "|---|---|---|---|"]
+        md += [f"| {f['height_cm']:.0f} cm | {'crack' if f['crack_tiles'] else 'clean'} | "
+               f"{(f['probability'] if f['crack_tiles'] else 1 - f['probability']) * 100:.0f} % | {f['photo']} |"
+               for f in sorted(self.findings, key=lambda f: f["height_cm"])]
+        if self.llm and self.findings:                # written defect report with manual citations
+            import rag
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rag.report(self.out / "findings.json")
+            md += ["", "## Assessment", "", buf.getvalue()]
+        md += ["", "## Transcript", ""] + [f"- {line}" for line in v.lines]
+        (self.out / "report.md").write_text("\n".join(md) + "\n")
+        print(f"   report: {self.out / 'report.md'}")
+
+    # one 20 ms tick of the world
+    def tick(self):
+        r, v = self.robot, self.voice
+        arrived = r.step()
+        if r.fell:
+            v.say("I lost the wall and fell.")
+            self.done = True
+        elif arrived:
+            self.why = f"I reached {arrived[0]:.0f} centimetres, which was my target."
+            if arrived[1]:
+                self.photo()
+            if not r.todo:
+                v.say(f"Done. I am at {r.at} centimetres with all four pads on.")
+
+
+# -- running it --------------------------------------------------------------
+def run_script(session, script, on_tick=None):
+    """Items run one after another when the robot is idle; '+3 stop' fires 3 s after the item before it."""
+    items = [s.strip() for s in script.split(";") if s.strip()]
+    r, last = session.robot, 0.0
+    while not session.done and (items or r.todo):
+        if items:
+            m = re.match(r"\+(\d+(?:\.\d+)?)\s+(.*)", items[0])
+            if (m and r.t - last >= float(m.group(1))) or (not m and (not r.todo or r.frozen)):
+                session.hear(m.group(2) if m else items[0])
+                items.pop(0)
+                last = r.t
+        session.tick()
+        if on_tick:
+            on_tick(session)
+    return session
+
+
+def run_live(session, speed):
+    inbox = queue.Queue()
+    threading.Thread(target=lambda: [inbox.put(line) for line in sys.stdin], daemon=True).start()
+    session.voice.say("Ready on the wall. " + HELP)
+    while not session.done:
+        start = time.time()
+        while not inbox.empty():
+            line = inbox.get().strip()
+            if line:
+                session.hear(line)
+        session.tick()
+        time.sleep(max(0.0, session.robot.dt / speed - (time.time() - start)))
+    time.sleep(2.5)                                   # let the last sentence finish
+
+
+def record(path, script):
+    """Scripted mission as a captioned GIF for the README."""
+    import mujoco
+    from PIL import Image, ImageDraw
+    from render_media import apple_font, make_camera, show_voltage
+    s = Session(mute=True)
+    size, font, frames, n = 340, apple_font(12), [], [0]
+    renderer = mujoco.Renderer(s.robot.env.model, size, size)
+
+    def grab(sess):
+        n[0] += 1
+        if n[0] % 25:
+            return
+        env = sess.robot.env
+        show_voltage(env)
+        renderer.update_scene(env.data, make_camera((0.15, 0, 0.05), 0.85, -34, 58))
+        im = Image.new("RGB", (size, size + 58), (20, 22, 26))
+        im.paste(Image.fromarray(renderer.render().copy()).rotate(90), (0, 0))
+        d = ImageDraw.Draw(im)
+        d.text((10, size + 8), "You:  " + sess.voice.last["You"][:48], fill=(255, 170, 60), font=font)
+        d.text((10, size + 30), "Robot:  " + sess.voice.last["Robot"][:42], fill=(255, 255, 255), font=font)
+        d.text((size - 70, 8), f"{sess.robot.height:4.1f} cm", fill=(255, 255, 255), font=font)
+        frames.append(im)
+
+    run_script(s, script, grab)
+    for _ in range(12):
+        grab(s) or frames.append(frames[-1])
+    pal = [f.convert("P", palette=Image.ADAPTIVE, colors=48) for f in frames]
+    pal[0].save(path, save_all=True, append_images=pal[1:], duration=100, loop=0, optimize=True)
+    print(f"saved {path}: {len(frames)} frames, {Path(path).stat().st_size / 1e6:.1f} MB")
+
+
+def selftest():
+    assert parse("Climb to 40 cm") == ("goto", {"cm": 40.0, "relative": False})
+    assert parse("climb another 20 centimetres") == ("goto", {"cm": 20.0, "relative": True})
+    assert parse("climb 2 metres") == ("goto", {"cm": 200.0, "relative": True})
+    assert parse("please come down") == ("goto", {"cm": 0.0, "relative": False})
+    assert parse("Inspect every 10 cm up to 30 cm.") == ("inspect", {"step": 10.0, "top": 30.0})
+    assert parse("STOP!")[0] == "stop" and parse("how high are you?")[0] == "status"
+    assert parse("why did you stop?")[0] == "why"
+    assert parse("sing me a song") is None
+    s = run_script(Session(mute=True), "climb to 6 cm; +1 stop; +1 status; resume; climb 2 metres; +3 come down to 4 cm; report")
+    r = s.robot
+    assert not r.fell and abs(r.height - 4) < 1.5, f"should end near 4 cm, is at {r.height:.1f}"
+    assert any("Stopped" in line for line in s.voice.lines) and any("wall ends" in line for line in s.voice.lines)
+    print(f"voice self-test passes: ended at {r.height:.1f} cm after {r.t:.0f} s of simulation")
+
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    opt = lambda name: args[args.index(name) + 1] if name in args else None
+    if "--selftest" in args:
+        selftest()
+    elif "--gif" in args:
+        record(opt("--gif"), opt("--script"))
+    elif "--script" in args:
+        run_script(Session(mute="--mute" in args), opt("--script"))
+    else:
+        run_live(Session(mute="--mute" in args), float(opt("--speed") or 1))

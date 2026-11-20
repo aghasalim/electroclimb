@@ -145,6 +145,7 @@ Splitting each pad into two independently driven halves fixes random pad drop-ou
 | Inspection assistant | RAG: BM25 over the FHWA Bridge Inspector's Reference Manual + Claude with page citations | answers and defect reports cite manual pages | [`inspection/rag.py`](inspection/rag.py) |
 | Subsurface sensing (WallScan) | Finite-difference field model + neural inverse on 36 electrode-pair capacitances | 91 % defect identification in simulation; untested on hardware | [`sensing/wallscan.py`](sensing/wallscan.py) |
 | Mission planning | LLM (Claude) turns a sentence into a checked waypoint plan the robot climbs in simulation | holds within 0.03 cm at each inspection stop | [`inspection/mission.py`](inspection/mission.py) |
+| Talking to the robot | Spoken orders and questions while it climbs: rules offline, Claude for free sentences; answers out loud | inspect, stop, resume, grip check, come down and report in one run | [`inspection/voice.py`](inspection/voice.py) |
 
 <p align="center"><img src="media/crack_scan.png" width="460" alt="Crack scan marking cracked tiles in red"></p>
 
