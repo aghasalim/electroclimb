@@ -188,3 +188,11 @@ All on the 40 hard test walls with split pads, trained on the second Mac (M5 Max
 1. Split pads with about 10 % more pad force than the current design (see above)
 2. Replace the placeholder adhesion with the test-rig model
 3. Floor-to-wall transitions
+
+## Balance on three legs
+
+`balance.py` works out how much grip each stance needs, with a force model and with MuJoCo: 41 % on four pads, 55–58 % with one leg lifted (upper leg worst). Explained in [`docs/HOW_IT_WORKS.md`](../docs/HOW_IT_WORKS.md#gravity-and-balance-standing-on-three-legs).
+
+```bash
+../.venv/bin/python balance.py figure
+```
