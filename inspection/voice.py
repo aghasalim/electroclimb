@@ -150,6 +150,12 @@ def remove_own_voice(mic, said, taps=3200, early=64):
     return (mic - fftconvolve(ref, h)[taps - 1:taps - 1 + len(mic)]).astype(np.float32)
 
 
+def loudest(audio):
+    """RMS of the loudest 0.1 s. Not the average: one short word in 1.5 s of quiet must still count."""
+    n = len(audio) // BLOCK * BLOCK
+    return float(np.sqrt((audio[:n].reshape(-1, BLOCK) ** 2).mean(axis=1).max())) if n else 0.0
+
+
 INTERRUPT = ("stop", "freeze", "pause", "quit")      # the only orders accepted over the robot's own voice
 
 
@@ -204,7 +210,7 @@ def listen(inbox, voice, level=None):
                 for audio, during in utterances((read() for _ in iter(int, 1)), level, robot_talking):
                     if during:                        # the robot is talking: take its voice out first
                         audio = remove_own_voice(audio, voice.audio)
-                        if float(np.sqrt(np.mean(audio ** 2))) < level:
+                        if loudest(audio) < level:
                             continue                  # nothing left, so nobody spoke over it
                         over = to_text(audio)
                         text = barge_in(over, voice.now)
@@ -261,13 +267,20 @@ def mictest():
         got = []
         for a, _ in utterances(cut, MIC_FLOOR, speaking=lambda: True):
             a = remove_own_voice(a, said)
-            if np.sqrt(np.mean(a ** 2)) > MIC_FLOOR:
+            if loudest(a) > MIC_FLOOR:
                 got.append(barge_in(to_text(a), robot_says))
         return [g for g in got if g]
 
     for line in ["Stopped at 4 centimetres. All pads are on.", "Ready on the wall. " + HELP,
                  "I am at 12 centimetres, climbing to 40. 3 pads are on the wall. The weakest is front-right with 13 newtons."]:
         assert not interrupts(line), f"the robot interrupted itself with: {line}"
+    soft = rng.normal(0, 0.001, 5 * RATE).astype(np.float32)
+    word = spoken("stop", "Daniel") * 0.12
+    soft[2 * RATE:2 * RATE + len(word)] += word
+    got = [barge_in(to_text(remove_own_voice(a, spoken("Ready on the wall.", "Samantha"))), "Ready on the wall.")
+           for a, _ in utterances([soft[i:i + BLOCK] for i in range(0, len(soft) - BLOCK, BLOCK)], MIC_FLOOR, speaking=lambda: True)
+           if loudest(a) > MIC_FLOOR]
+    assert got == ["stop"], "a quiet stop without echo was not heard"
     long = "I am at 12 centimetres, climbing to 40. 3 pads are on the wall. The weakest is front-right with 13 newtons."
     heard = [bool(interrupts(long, "stop", at)) for at in (0.5, 1.0, 1.3, 1.8, 2.6, 3.4)]
     print(f"  stop spoken over the robot at 6 moments: heard {sum(heard)} of 6")
