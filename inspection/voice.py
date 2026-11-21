@@ -17,7 +17,7 @@ new order work in the middle of a climb. It understands:
 
 Speech out: macOS `say`. Speech in: typed lines, or `--mic` for the microphone (Whisper base.en
 through faster-whisper; needs `pip install faster-whisper sounddevice` and downloads the 145 MB
-model once). "Stop", "pause", "freeze" and "quit" also work while the robot is talking and cut
+model once). "Stop", "pause" and "freeze" also work while the robot is talking and cut
 it off (its own voice is subtracted from the microphone first); other orders wait until it is
 quiet. A bare Return always stops it. Talk in the
 room is ignored: the microphone only passes short sentences that are orders, or anything that
@@ -32,6 +32,7 @@ and the real crack CNN classifies it. Without the dataset, photos are saved but 
 import contextlib
 import io
 import json
+import os
 import queue
 import re
 import shutil
@@ -162,10 +163,13 @@ def for_robot(text):
     """Is this microphone sentence meant for the robot? Yes if it says "robot", or if it is a
     short sentence that the rules read as an order. Everything else is talk in the room."""
     # ponytail: word rules, so a short "wait a minute" nearby still stops it; a wake word for every order if that bites
-    return "robot" in text.lower() or (parse(text) is not None and len(text.split()) <= 10)
+    said_robot, order = "robot" in text.lower(), parse(text)
+    if order and order[0] == "quit":                  # a goodbye in a video must not end the session
+        return said_robot
+    return said_robot or (order is not None and len(text.split()) <= 10)
 
 
-INTERRUPT = ("stop", "freeze", "pause", "quit")      # the only orders accepted over the robot's own voice
+INTERRUPT = ("stop", "freeze", "pause")              # the only orders accepted over the robot's own voice
 
 
 def barge_in(heard, robot_says):
@@ -259,6 +263,7 @@ def mictest():
     assert [parse(t) for t in texts] == [want for _, want in orders], "an order was misheard"
     assert not any(for_robot(t) for t in ["Thank you very much, Anna.", "Hey, how are you?", "Let's go to the next one.",
                                            "So I think we should check the numbers again before we go up to the office tomorrow."])
+    assert not for_robot("Bye-bye.") and for_robot("Robot, quit.") and barge_in("Okay, bye, quit.", "") is None
     assert for_robot("Check your grip.") and for_robot("Robot, what does the manual say about wide cracks?")
     assert not list(utterances([np.zeros(BLOCK, np.float32)] * 50, MIC_FLOOR)), "silence produced an order"
 
@@ -579,15 +584,21 @@ def run_live(session, speed, mic=False, mic_level=None):
     inbox = queue.Queue()
     threading.Thread(target=lambda: [inbox.put(line) for line in sys.stdin], daemon=True).start()
     if mic:
+        os.environ["PYTHONWARNINGS"] = "ignore:resource_tracker"   # its helper process complains about the hard exit below
         threading.Thread(target=listen, args=(inbox, session.voice, mic_level), daemon=True).start()
     session.voice.say("Ready on the wall. " + HELP)
-    while not session.done:
-        start = time.time()
-        while not inbox.empty():
-            session.hear(inbox.get().strip() or "stop")   # a bare Return is the sure stop
-        session.tick()
-        time.sleep(max(0.0, session.robot.dt / speed - (time.time() - start)))
-    time.sleep(2.5)                                   # let the last sentence finish
+    try:
+        while not session.done:
+            start = time.time()
+            while not inbox.empty():
+                session.hear(inbox.get().strip() or "stop")   # a bare Return is the sure stop
+            session.tick()
+            time.sleep(max(0.0, session.robot.dt / speed - (time.time() - start)))
+        time.sleep(2.5)                               # let the last sentence finish
+    except KeyboardInterrupt:
+        session.voice.hush()
+    sys.stdout.flush()
+    os._exit(0)     # the microphone and Whisper threads crash the interpreter if it shuts down normally
 
 
 def record(path, script):
