@@ -19,7 +19,9 @@ Speech out: macOS `say`. Speech in: typed lines, or `--mic` for the microphone (
 through faster-whisper; needs `pip install faster-whisper sounddevice` and downloads the 145 MB
 model once). "Stop", "pause", "freeze" and "quit" also work while the robot is talking and cut
 it off (its own voice is subtracted from the microphone first); other orders wait until it is
-quiet. A bare Return always stops it. In a noisy room raise the threshold with `--mic-level 0.03`. Anything the rules
+quiet. A bare Return always stops it. Talk in the
+room is ignored: the microphone only passes short sentences that are orders, or anything that
+says "robot" ("Robot, what does the manual say about wide cracks?"). In a noisy room raise the threshold with `--mic-level 0.03`. Anything the rules
 above don't cover goes to Claude (mission planner, or the manual assistant for questions) when
 a valid ANTHROPIC_API_KEY is set; without one the robot says it did not understand.
 
@@ -156,6 +158,13 @@ def loudest(audio):
     return float(np.sqrt((audio[:n].reshape(-1, BLOCK) ** 2).mean(axis=1).max())) if n else 0.0
 
 
+def for_robot(text):
+    """Is this microphone sentence meant for the robot? Yes if it says "robot", or if it is a
+    short sentence that the rules read as an order. Everything else is talk in the room."""
+    # ponytail: word rules, so a short "wait a minute" nearby still stops it; a wake word for every order if that bites
+    return "robot" in text.lower() or (parse(text) is not None and len(text.split()) <= 10)
+
+
 INTERRUPT = ("stop", "freeze", "pause", "quit")      # the only orders accepted over the robot's own voice
 
 
@@ -218,6 +227,9 @@ def listen(inbox, voice, level=None):
                             print(f"(heard while speaking, ignored: {over})", flush=True)
                     else:
                         text = to_text(audio)
+                        if text and not for_robot(text):
+                            print(f"(not for me, ignored: {text})", flush=True)
+                            continue
                     if text:
                         inbox.put(text)
         except sd.PortAudioError:                     # macOS restarts audio when playback begins or a device changes
@@ -245,6 +257,9 @@ def mictest():
     for t in texts:
         print(f"  heard: {t!r} -> {parse(t)}")
     assert [parse(t) for t in texts] == [want for _, want in orders], "an order was misheard"
+    assert not any(for_robot(t) for t in ["Thank you very much, Anna.", "Hey, how are you?", "Let's go to the next one.",
+                                           "So I think we should check the numbers again before we go up to the office tomorrow."])
+    assert for_robot("Check your grip.") and for_robot("Robot, what does the manual say about wide cracks?")
     assert not list(utterances([np.zeros(BLOCK, np.float32)] * 50, MIC_FLOOR)), "silence produced an order"
 
     def spoken(text, voice):
