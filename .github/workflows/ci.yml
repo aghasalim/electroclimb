@@ -1,0 +1,31 @@
+name: ci
+
+# Three checks that need no GPU and no trained policy: the electrode generator
+# must not produce shorted pads, the HV driver values must pass their design
+# rules, and the simulated robot must hold on the wall with the pads on and
+# slide off with them off.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: electrode generator selftest
+        run: python tools/gen_electrode.py --selftest
+      - name: HV driver design rules
+        run: python tools/driver_calc.py
+      - name: simulation physics checks
+        run: |
+          pip install "mujoco>=3.2" numpy
+          cd sim && python check_physics.py
