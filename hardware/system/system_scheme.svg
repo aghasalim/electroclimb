@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 850" width="1400" height="850" font-family="-apple-system, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<rect width="1400" height="850" fill="#ffffff"/>
+<text x="30" y="38" font-size="22" fill="#1a1a1a" text-anchor="start" font-weight="600">ElectroClimb: system scheme</text>
+<text x="30" y="60" font-size="13" fill="#555" text-anchor="start" font-weight="400">What is on the robot and how the parts are connected. Design status: not built yet; the simulation uses the same layout.</text>
+<rect x="30" y="80" width="250" height="720" rx="10" fill="#f6f7f9" stroke="#c9ced6"/>
+<text x="42" y="100" font-size="13" fill="#555" text-anchor="start" font-weight="600">On the ground</text>
+<rect x="310" y="80" width="580" height="720" rx="10" fill="#f6f7f9" stroke="#c9ced6"/>
+<text x="322" y="100" font-size="13" fill="#555" text-anchor="start" font-weight="600">Body</text>
+<rect x="920" y="80" width="450" height="720" rx="10" fill="#f6f7f9" stroke="#c9ced6"/>
+<text x="932" y="100" font-size="13" fill="#555" text-anchor="start" font-weight="600">One leg (the robot has 4)</text>
+<rect x="50" y="330" width="210" height="75" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="60" y="350" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">Operator laptop</text>
+<text x="60" y="368" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">mission, voice, live view</text>
+<text x="60" y="383" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">can stop the robot</text>
+<rect x="50" y="470" width="210" height="75" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="60" y="490" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">Safety tether</text>
+<text x="60" y="508" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">rope from an anchor above</text>
+<text x="60" y="523" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">to the tether eye on the body</text>
+<path d="M260 365 L350 365" fill="none" stroke="#1f77b4" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="6 5"/>
+<text x="296" y="358" font-size="11" fill="#1f77b4" text-anchor="middle" font-weight="600">Wi-Fi</text>
+<path d="M260 507 L310 507" fill="none" stroke="#7f7f7f" stroke-width="2.4" stroke-linejoin="round"/>
+<rect x="350" y="110" width="150" height="65" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="360" y="130" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">Battery</text>
+<text x="360" y="148" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">3S LiPo, 11.1 V</text>
+<text x="360" y="163" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">XT60 plug</text>
+<rect x="530" y="110" width="170" height="65" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="540" y="130" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">Fuse + main switch</text>
+<text x="540" y="148" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">15 A blade fuse</text>
+<text x="540" y="163" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">everything off here</text>
+<path d="M500 142 L530 142" fill="none" stroke="#d62728" stroke-width="2.4" stroke-linejoin="round"/>
+<rect x="350" y="215" width="100" height="50" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="360" y="235" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">Camera</text>
+<text x="360" y="253" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">CSI</text>
+<rect x="470" y="215" width="100" height="50" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="480" y="235" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">IMU</text>
+<text x="480" y="253" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">I2C</text>
+<path d="M400 265 L400 290" fill="none" stroke="#1f77b4" stroke-width="2.4" stroke-linejoin="round"/>
+<path d="M520 265 L520 290" fill="none" stroke="#1f77b4" stroke-width="2.4" stroke-linejoin="round"/>
+<rect x="350" y="290" width="220" height="180" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="360" y="310" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">Raspberry Pi 5</text>
+<text x="360" y="328" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">walking gait and RL policy</text>
+<text x="360" y="343" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">crack detection on camera</text>
+<text x="360" y="358" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">mission plan and voice</text>
+<text x="360" y="373" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">sets each pad's voltage</text>
+<text x="360" y="388" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">reads grip, IMU, servo angles</text>
+<text x="360" y="403" font-size="11.5" fill="#444" text-anchor="start" font-weight="400"></text>
+<text x="360" y="418" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">Wi-Fi to the operator</text>
+<rect x="640" y="300" width="190" height="65" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="650" y="320" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">Servo bus adapter</text>
+<text x="650" y="338" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">USB to one-wire serial</text>
+<text x="650" y="353" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">1 Mbit/s, servo IDs 1 to 12</text>
+<rect x="640" y="400" width="190" height="65" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="650" y="420" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">USB-CAN adapter</text>
+<text x="650" y="438" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">500 kbit/s</text>
+<text x="650" y="453" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">120 Ω at both bus ends</text>
+<path d="M570 332 L640 332" fill="none" stroke="#1f77b4" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="605" y="326" font-size="11" fill="#1f77b4" text-anchor="middle" font-weight="600">USB</text>
+<path d="M570 432 L640 432" fill="none" stroke="#1f77b4" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="605" y="426" font-size="11" fill="#1f77b4" text-anchor="middle" font-weight="600">USB</text>
+<rect x="350" y="610" width="170" height="65" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="360" y="630" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">5 V converter</text>
+<text x="360" y="648" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">12 V in, 5 V / 5 A out</text>
+<text x="360" y="663" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">feeds the Pi and the feet</text>
+<rect x="600" y="610" width="230" height="65" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="610" y="630" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">Arm key switch + E-stop</text>
+<text x="610" y="648" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">both must be closed</text>
+<text x="610" y="663" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">or no pad gets high voltage</text>
+<path d="M545 175 L545 197 L332 197 L332 642 L350 642" fill="none" stroke="#d62728" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="440" y="191" font-size="11" fill="#d62728" text-anchor="middle" font-weight="600">12 V</text>
+<path d="M435 610 L435 470" fill="none" stroke="#e8860c" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="452" y="545" font-size="11" fill="#e8860c" text-anchor="middle" font-weight="600">5 V</text>
+<path d="M520 642 L600 642" fill="none" stroke="#e8860c" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="560" cy="642" r="4" fill="#e8860c"/>
+<rect x="950" y="250" width="400" height="110" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="960" y="270" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">3 servos: abduction, hip, knee</text>
+<text x="960" y="288" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">Feetech STS3215, 12 V version, daisy-chained</text>
+<text x="960" y="303" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">each reports angle, load, voltage and temperature</text>
+<text x="960" y="318" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">0.9 A rated, 2.7 A stalled, each</text>
+<rect x="950" y="400" width="250" height="250" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="960" y="420" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">Foot driver board</text>
+<text x="960" y="438" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">XIAO ESP32-S3 microcontroller</text>
+<text x="960" y="453" font-size="11.5" fill="#444" text-anchor="start" font-weight="400"></text>
+<text x="960" y="468" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">0 to 3 kV module, set by the XIAO</text>
+<text x="960" y="483" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">current limit: 64 µA in a short</text>
+<text x="960" y="498" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">bleeder: pad safe in seconds</text>
+<text x="960" y="513" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">release relay: about 1 ms</text>
+<text x="960" y="528" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">measures pad voltage and charge</text>
+<text x="960" y="543" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">(charge / voltage = grip signal)</text>
+<text x="960" y="558" font-size="11.5" fill="#444" text-anchor="start" font-weight="400"></text>
+<text x="960" y="573" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">one board per pad;</text>
+<text x="960" y="588" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">a split pad needs two</text>
+<rect x="1235" y="415" width="115" height="150" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="1245" y="435" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">Pad</text>
+<text x="1245" y="453" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">flexible PCB</text>
+<text x="1245" y="468" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">80 × 60 mm</text>
+<text x="1245" y="483" font-size="11.5" fill="#444" text-anchor="start" font-weight="400"></text>
+<text x="1245" y="498" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">electrode A</text>
+<text x="1245" y="513" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">electrode B</text>
+<text x="1245" y="528" font-size="11.5" fill="#444" text-anchor="start" font-weight="400"></text>
+<text x="1245" y="543" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">TPU carrier,</text>
+<text x="1245" y="558" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">spring ankle</text>
+<rect x="1235" y="590" width="115" height="55" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="1245" y="610" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">Contact switch</text>
+<text x="1245" y="628" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">foot on the wall</text>
+<path d="M1200 470 L1235 470" fill="none" stroke="#c2185b" stroke-width="2.4" stroke-linejoin="round"/>
+<path d="M1200 500 L1235 500" fill="none" stroke="#c2185b" stroke-width="2.4" stroke-linejoin="round"/>
+<path d="M1200 617 L1235 617" fill="none" stroke="#1f77b4" stroke-width="2.4" stroke-linejoin="round"/>
+<path d="M700 142 L1150 142 L1150 250" fill="none" stroke="#d62728" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="925" y="136" font-size="11" fill="#d62728" text-anchor="middle" font-weight="600">12 V servo power</text>
+<path d="M830 332 L950 332" fill="none" stroke="#1f77b4" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="890" y="326" font-size="11" fill="#1f77b4" text-anchor="middle" font-weight="600">servo bus</text>
+<path d="M830 432 L950 432" fill="none" stroke="#1f77b4" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="890" y="426" font-size="11" fill="#1f77b4" text-anchor="middle" font-weight="600">CAN bus</text>
+<path d="M830 642 L880 642 L880 700 L1010 700 L1010 650" fill="none" stroke="#8c2d04" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="990" y="716" font-size="11" fill="#8c2d04" text-anchor="middle" font-weight="600">armed 5 V for the HV modules</text>
+<path d="M560 642 L560 745 L1100 745 L1100 650" fill="none" stroke="#e8860c" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="700" y="739" font-size="11" fill="#e8860c" text-anchor="middle" font-weight="600">5 V logic</text>
+<path d="M50 600 L84 600" fill="none" stroke="#d62728" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="94" y="604" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">12 V battery power</text>
+<path d="M50 618 L84 618" fill="none" stroke="#e8860c" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="94" y="622" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">5 V logic power</text>
+<path d="M50 636 L84 636" fill="none" stroke="#8c2d04" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="94" y="640" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">5 V after arm switch and E-stop</text>
+<path d="M50 654 L84 654" fill="none" stroke="#1f77b4" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="94" y="658" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">data</text>
+<path d="M50 672 L84 672" fill="none" stroke="#1f77b4" stroke-width="2.4" stroke-linejoin="round" stroke-dasharray="6 5"/>
+<text x="94" y="676" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">wireless</text>
+<path d="M50 690 L84 690" fill="none" stroke="#c2185b" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="94" y="694" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">high voltage, 0 to 3 kV, microamps</text>
+<path d="M50 708 L84 708" fill="none" stroke="#7f7f7f" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="94" y="712" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">mechanical</text>
+<text x="50" y="745" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">Ground (0 V) returns are not drawn.</text>
+<text x="50" y="762" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">They run next to every power line.</text>
+</svg>

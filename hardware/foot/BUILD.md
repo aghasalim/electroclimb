@@ -25,6 +25,7 @@ A step-by-step guide to build and test **one ElectroClimb foot**. It is split in
 | [`electroclimb.pretty/EA_Pad_80x60_F1_G1.kicad_mod`](electroclimb.pretty/) | Adhesion pad: two interdigitated combs, 1 mm fingers and gaps |
 | [`electroclimb.pretty/WS_Pad_80x60_S8_W7_G2.kicad_mod`](electroclimb.pretty/) | WallScan test pad: 8 separate strips, 7 mm wide, 2 mm apart, 52 mm long |
 | [`fab/EA_Pad_80x60_F1_G1.zip`](fab/EA_Pad_80x60_F1_G1.zip), [`fab/WS_Pad_80x60_S8_W7_G2.zip`](fab/WS_Pad_80x60_S8_W7_G2.zip) | **Order-ready Gerber files** for both pads: copper, coverlay openings, outline. Upload the zip to the PCB maker. |
+| [`driver/`](driver/) | The driver board for level 3: KiCad file, Gerbers, parts list, schematic |
 | [`../../sensing/bench.py`](../../sensing/bench.py), [`bench_results_template.csv`](../../sensing/bench_results_template.csv) | Predictions for the level 1 test, the sheet to fill in and the script that analyses it |
 
 ## Parts
@@ -45,8 +46,8 @@ Prices are rough, from distributor listings in November 2026. Check them before 
 | 10 | Capacitance meter: LCR meter from the lab, or an FDC2214 chip on a breakout (chip about €5–7) | 1 | 1 | lab, or €10–20 |
 | 11 | Luggage scale or 5 kg load cell + HX711 | 1 | 2 | €8 |
 | 12 | Test surfaces: glass pane, plywood, a concrete paving slab | 1 each | 1, 2 | €10 |
-| 13 | XP Power A30P-5 / AG30P-5, 0–3 kV HV module | 1 | 3 | **about $230–265** ([Mouser](https://www.mouser.com/ProductDetail/XP-Power/A30P-5?qs=w/v1CP2dgqqpsSpnz/QFMg%3D%3D), [Digi-Key](https://www.digikey.com/en/products/detail/xp-power/A30P-5/5873510)). The AG30P-5 may be discontinued; confirm before designing it in. |
-| 14 | HV reed relay, XIAO ESP32-S3, small parts (see [`bom.csv`](bom.csv)) | 1 set | 3 | €25 |
+| 13 | XP Power A30P-5, 0–3 kV HV module | 1 | 3 | **about €270** ([Digi-Key](https://www.digikey.de/en/products/detail/xp-power/A30P-5/5873510), 23 in stock on 24 November 2026). |
+| 14 | Driver board and its parts: PCB, HV reed relay, HV resistors, XIAO ESP32-S3, small parts (see [`driver/bom.csv`](driver/bom.csv)) | 1 set | 3 | roughly €40–60 without the module (an estimate: the relay price was not checked) |
 
 **The HV module is the expensive part.** Four feet with split pads would need eight of them, which is over €2,000. Finding a cheaper high-voltage source is an open task; one shared supply with a relay per pad half is the first option to test.
 
@@ -131,7 +132,7 @@ Put the measured values into `adh_gain` in the simulation; that replaces the 15 
 
 ## Level 3: the foot's own driver
 
-Build the driver from [`README.md`](README.md) section 3 and [`driver_schematic.svg`](driver_schematic.svg). Verify the module's pinout from its datasheet first. Then measure: time to full grip, release time with the reed relay, and whether the grip signal on the sense resistor tells contact from no contact.
+Build the driver board in [`driver/`](driver/) and work through its list of open points first. Then measure: time to full grip, release time with the reed relay, and whether the grip signal on the sense resistor tells contact from no contact.
 
 ## Open questions this build should answer
 

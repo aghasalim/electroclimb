@@ -1,0 +1,44 @@
+ref,value,footprint,part to order
+C1,1u,C_0805_2012Metric,1 uF 16 V X7R 0805
+C2,10u,C_0805_2012Metric,10 uF 16 V X5R 0805
+C3,100n,C_0805_2012Metric,100 nF 50 V X7R 0805
+C4,10u,C_0805_2012Metric,10 uF 16 V X5R 0805
+C5,100n,C_0805_2012Metric,100 nF 50 V X7R 0805
+C6,1n,C_0805_2012Metric,1 nF 50 V C0G 0805
+C8,100n,C_0805_2012Metric,100 nF 50 V X7R 0805
+C9,100n,C_0805_2012Metric,100 nF 50 V X7R 0805
+D1,BAV199,SOT-23,BAV199 (check pin numbers on the datasheet)
+D2,BAV199,SOT-23,BAV199
+D3,schottky,D_SOD-123,MBR0520 or B5819W
+D4,1N4148W,D_SOD-123,1N4148W
+D5,red,LED_0805_2012Metric,red LED 0805
+J1,leg cable,JST_XH_B5B-XH-A_1x05_P2.50mm_Vertical,JST B5B-XH-A
+J2,contact switch,JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical,JST B2B-XH-A (jumper it for bench tests)
+J3,PAD A,WIREPAD,"solder pad for silicone HV wire, >= 5 kV"
+J4,PAD B,WIREPAD,"solder pad for silicone HV wire, >= 5 kV"
+JP1,CAN end,PinHeader_1x02_P2.54mm_Vertical,2-pin header + jumper (fit on the last board of the bus)
+K1,SHV05-1A85-78x4K,SHV,Standex-Meder SHV05-1A85-78D4K (4 kV breakdown; see README on its switching rating)
+Q1,2N7002,SOT-23,2N7002
+R1,10k,R_0805_2012Metric,10 k 1 % 0805
+R10,1k,R_0805_2012Metric,1 k 1 % 0805
+R11,100k,R_0805_2012Metric,100 k 1 % 0805
+R12,1k,R_0805_2012Metric,1 k 1 % 0805
+R13,100R,R_0805_2012Metric,100 R 1 % 0805
+R14,100k,R_0805_2012Metric,100 k 1 % 0805
+R15,1k,R_0805_2012Metric,1 k 1 % 0805
+R16,10k,R_0805_2012Metric,10 k 1 % 0805
+R17,15k,R_0805_2012Metric,15 k 1 % 0805
+R18,10k,R_0805_2012Metric,10 k 1 % 0805
+R19,120R,R_0805_2012Metric,120 R 1 % 0805
+R2,47M,VR68,"Vishay VR68000004705JAC00 (10 kV, 1 W)"
+R3,1G,MOX750,"Ohmite MOX-750231007FE (5 kV, 1 %)"
+R4,1M,VR37,"Vishay VR37000001004JA100 (3.5 kV, pulse rated)"
+R5,10k,R_0805_2012Metric,10 k 0.1 % 0805
+R6,1k,R_0805_2012Metric,1 k 1 % 0805
+R7,750k,R_0805_2012Metric,750 k 1 % 0805
+R8,5k1,R_0805_2012Metric,5.1 k 1 % 0805
+R9,10k,R_0805_2012Metric,10 k 1 % 0805
+U1,A30P-5,A30P-5,XP Power A30P-5
+U2,XIAO ESP32-S3,XIAO,Seeed XIAO ESP32-S3 + two 1x7 sockets
+U3,MCP6001,SOT-23-5,Microchip MCP6001T-I/OT
+U4,SN65HVD230,SOIC-8_3.9x4.9mm_P1.27mm,TI SN65HVD230DR

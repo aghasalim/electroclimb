@@ -2,15 +2,7 @@ block,item,qty_per_foot,candidate_part,status,notes
 pad,Flex PCB electrode pad 80x60 mm,1,custom (tools/gen_electrode.py),design,"1-layer flex, 18 um Cu, 25 um PI base + 25 um coverlay; order 3 finger/gap variants"
 pad,Compliant backing,1,3D printed TPU 95A or 2-3 mm foam,design,
 pad,HV-rated flex connector or soldered HV wire,2,silicone HV test lead wire rated >=5 kV,verify,
-driver,U1 Proportional DC-HV module 0-3 kV from 5 V,1,XP Power AG30P-5 (fallback: XP Power Q30-5),chosen - verify pinout,"AG30P-5: 0.7-5 V in, 0-3 kV out, 1 W, separate high-impedance control pin. Q30-5: 3 kV, 167 uA, in RS stock (check polarity: Q30N = negative)"
-driver,R2 fault-limit resistor 47 MOhm,1,HV thick-film resistor >=5 kV / 0.5 W,verify,limits short current to 64 uA (tools/driver_calc.py)
-driver,R3 safety bleeder 1 GOhm,1,HV thick-film resistor >=5 kV,verify,always connected; pad safe within ~2.5 s if anything fails
-driver,R4 fast-release resistor 1 MOhm,1,HV resistor >=5 kV pulse rated,verify,tau ~1 ms with K1
-driver,K1 HV reed relay,1,"HV reed relay, >=3 kV standoff, 5 V coil",verify,"required, not optional: gives fast foot release; drive coil via NPN + flyback diode"
-driver,R1 + C1 setpoint filter,1,10 kOhm + 10 uF,known,PWM to 0-5 V Vctrl
-driver,R5 sense resistor 10 kOhm,1,10 kOhm 0.1%,known,pad B to GND; 0.64 V peak
-driver,R6 + D1 ADC protection,1,1 kOhm + low-leakage clamp/TVS to 3.3 V and GND,verify,protects XIAO ADC if pad flashes over
-driver,Microcontroller,1,Seeed Studio XIAO ESP32-S3,known,"DAC/PWM for HV setpoint, ADC for sensing, CAN via transceiver"
+driver,Driver board with all its parts,1,see driver/bom.csv,designed - not built,"KiCad board, Gerbers and the list of open points are in driver/"
 sensing,Charge amplifier (optional v2),1,low-bias CMOS op-amp (e.g. MCP6002 class),verify,v1 integrates digitally from R5; add if ESP32 ADC is too noisy
 sensing,Capacitance-to-digital converter (v2),1,TI FDC2214 or ADI AD7746 class,verify,measured only while HV is off
 safety,Interlock switch,1,microswitch on foot + arm switch,known,HV enable only when closed

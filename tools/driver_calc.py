@@ -6,7 +6,7 @@ Run it after changing any value; it fails loudly if a design rule breaks.
 """
 
 # --- inputs -----------------------------------------------------------------
-V_MAX = 3000.0          # V, HV module max output (XP Power AG30P-5 class)
+V_MAX = 3000.0          # V, HV module max output (XP Power A30P-5)
 P_MODULE = 1.0          # W, module rating
 C_PAD_MAX = 1e-9        # F, worst-case pad capacitance in contact (to be measured)
 C_PAD_TYP = 500e-12     # F, typical
@@ -17,6 +17,12 @@ R_DUMP = 1e6            # ohm, fast-release resistor switched by HV reed relay
 R_SENSE = 10e3          # ohm, pad B -> GND, read by the ADC
 V_ADC_MAX = 2.5         # V, usable ADC range on the XIAO ESP32-S3 (with attenuation)
 F_ADC = 20e3            # Hz, ADC sample rate during an energise event
+R_MON = 750e3           # ohm, bottom of the pad-voltage divider (the bleeder is the top)
+V_PWM = 3.3             # V, XIAO logic level
+R_FB, R_G = 5.1e3, 10e3 # ohm, op-amp gain resistors: the module's control pin wants 0..5 V
+V_IN = 5.0              # V, module supply; the control pin must not exceed it
+OVERSHOOT = 1.3         # the module is unregulated: allow 30 % above V_MAX at light load
+K1_SWITCH_V = 1000.0    # V, rated switching voltage of the SHV reed relay (4 kV breakdown)
 
 # --- derived ----------------------------------------------------------------
 v_pad = V_MAX * R_BLEED / (R_LIMIT + R_BLEED)        # steady pad voltage (divider loss)
@@ -29,6 +35,11 @@ tau_bleed = R_BLEED * C_PAD_TYP
 v_sense_peak = i_short * R_SENSE                      # first instant of charging
 q_pad = C_PAD_TYP * v_pad
 samples_per_tau = tau_charge * F_ADC
+v_ctrl_max = V_PWM * (1 + R_FB / R_G)                 # control voltage at 100 % PWM
+v_mon = v_pad * R_MON / (R_BLEED + R_MON)             # monitor voltage at full pad voltage
+v_mon_worst = V_MAX * OVERSHOOT * R_MON / (R_BLEED + R_MON)
+i_dump_peak = V_MAX / R_DUMP                          # through the relay contact at the moment it closes
+e_pad = 0.5 * C_PAD_MAX * V_MAX ** 2                  # energy the relay and R_DUMP have to take
 
 rows = [
     ("Steady pad voltage", f"{v_pad:.0f} V ({v_pad / V_MAX:.1%} of max)"),
@@ -41,6 +52,9 @@ rows = [
     ("Peak sense voltage", f"{v_sense_peak:.2f} V"),
     ("Pad charge per step (typ)", f"{q_pad * 1e6:.2f} uC"),
     ("ADC samples per charge time constant", f"{samples_per_tau:.0f}"),
+    ("Control voltage at 100 % PWM", f"{v_ctrl_max:.2f} V"),
+    ("Monitor voltage at full pad voltage", f"{v_mon:.2f} V ({v_mon_worst:.2f} V at {OVERSHOOT:.0%} overshoot)"),
+    ("Relay closes onto", f"{V_MAX:.0f} V, {i_dump_peak * 1e3:.0f} mA peak, {e_pad * 1e3:.1f} mJ"),
 ]
 
 # --- design rules -----------------------------------------------------------
@@ -54,6 +68,9 @@ checks = [
     (v_sense_peak <= V_ADC_MAX, "sense voltage exceeds ADC range"),
     (v_sense_peak >= 0.2, "sense signal too small to measure"),
     (samples_per_tau >= 50, "too few ADC samples to integrate the charge"),
+    (0.95 * V_IN <= v_ctrl_max <= V_IN, "control voltage does not reach, or exceeds, the module supply"),
+    (v_mon_worst <= 3.1, "monitor voltage can exceed the ADC range"),
+    (v_mon >= 1.5, "monitor voltage uses less than half the ADC range"),
 ]
 
 if __name__ == "__main__":
@@ -64,3 +81,6 @@ if __name__ == "__main__":
         print("FAIL:", msg)
     assert not failed, f"{len(failed)} design rule(s) failed"
     print("all design rules pass")
+    if V_MAX > K1_SWITCH_V:      # a known open point, not a pass: see hardware/foot/driver/README.md
+        print(f"OPEN POINT: the relay closes onto {V_MAX:.0f} V but is rated to switch {K1_SWITCH_V:.0f} V. "
+              "Test it on the bench or fit a relay rated for the full voltage.")

@@ -1,74 +1,253 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="1000" height="600" font-family="Helvetica, Arial, sans-serif" font-size="13">
-<rect width="1000" height="600" fill="#ffffff"/>
-<text x="20" y="28" font-size="18" font-weight="bold">ElectroClimb foot HV driver v1 (one per foot)</text>
-<text x="20" y="48" fill="#b00" font-size="12">HIGH VOLTAGE: up to 3 kV. Red = HV nets. Values from tools/driver_calc.py</text>
-<g stroke="#000" stroke-width="1.6" fill="none">
-<!-- XIAO -->
-<rect x="30" y="140" width="130" height="200"/>
-<!-- 5V rail and interlock -->
-<path d="M30 100 H300"/><path d="M300 100 L320 88"/><path d="M325 100 H380 V170"/>
-<!-- RC filter -->
-<path d="M160 190 H200"/><rect x="200" y="182" width="40" height="16"/><path d="M240 190 H380"/>
-<path d="M270 190 V215"/><path d="M258 215 H282 M258 222 H282"/><path d="M270 222 V245 M262 245 H278"/>
-<!-- HV module -->
-<rect x="380" y="150" width="150" height="130"/>
-<path d="M380 250 H360 V300 M352 300 H368"/>
-</g>
-<g stroke="#c00" stroke-width="2" fill="none">
-<!-- HV+ out to R_LIMIT -->
-<path d="M530 175 H580"/><rect x="580" y="167" width="60" height="16"/><path d="M640 175 H740 V215"/>
-<!-- pad capacitor -->
-<path d="M720 215 H760 M720 228 H760"/>
-<!-- bleeder across pad -->
-<path d="M740 175 H850 V185"/><rect x="842" y="185" width="16" height="50"/><path d="M850 235 V255 H740"/>
-<!-- dump relay + R_DUMP -->
-<path d="M800 175 V188"/><path d="M800 188 L815 205"/><path d="M800 210 V222"/><rect x="792" y="222" width="16" height="22"/><path d="M800 244 V255"/>
-<path d="M740 228 V255"/>
-</g>
-<g stroke="#000" stroke-width="1.6" fill="none">
-<!-- pad B to R_SENSE to GND (module return) -->
-<path d="M740 255 V300"/><rect x="732" y="300" width="16" height="44"/><path d="M740 344 V380 M728 380 H752 M733 386 H747 M738 392 H742"/>
-<path d="M530 255 H560 V380 H728"/>
-<!-- sense to ADC -->
-<path d="M740 300 H680 V440 H260"/><rect x="420" y="432" width="40" height="16"/>
-<path d="M330 440 V470 M318 470 H342 M330 470 L322 482 H338 Z"/>
-<path d="M260 440 V300 H160"/>
-<!-- relay coil driver -->
-<path d="M160 230 H230 V520 H805 V470"/><rect x="785" y="440" width="40" height="30"/><path d="M805 440 V260" stroke-dasharray="4 4"/>
-</g>
-<g fill="#000">
-<text x="45" y="165" font-weight="bold">XIAO ESP32-S3</text>
-<text x="45" y="195">PWM: HV set</text>
-<text x="45" y="235">GPIO: release</text>
-<text x="45" y="305">ADC: Q sense</text>
-<text x="40" y="94">+5 V</text>
-<text x="290" y="80">S1 interlock</text>
-<text x="290" y="128" font-size="11">(foot contact + arm switch)</text>
-<text x="196" y="176" font-size="11">R1 10k</text>
-<text x="290" y="222" font-size="11">C1 10 uF</text>
-<text x="390" y="172" font-weight="bold">U1 HV module</text>
-<text x="390" y="190" font-size="11">XP Power AG30P-5</text>
-<text x="390" y="206" font-size="11">0-3 kV, 1 W</text>
-<text x="390" y="230" font-size="11">Vin / Vctrl / GND</text>
-<text x="472" y="268" font-size="11">HV return</text>
-<text x="500" y="168" font-size="11" fill="#c00">HV+</text>
-<text x="574" y="160" font-size="11" fill="#c00">R2 47M (fault limit)</text>
-<text x="660" y="205" font-size="11" fill="#c00">Pad A</text>
-<text x="664" y="245" font-size="11" fill="#c00">Pad B</text>
-<text x="590" y="225" font-size="12" font-weight="bold" fill="#c00">Electrode pad</text>
-<text x="590" y="240" font-size="11" fill="#c00">~0.5-1 nF</text>
-<text x="866" y="205" font-size="11" fill="#c00">R3 1G</text>
-<text x="866" y="220" font-size="11" fill="#c00">safety bleed</text>
-<text x="816" y="196" font-size="11" fill="#c00">K1</text>
-<text x="752" y="238" font-size="11" fill="#c00">R4 1M</text>
-<text x="756" y="320" font-size="11">R5 10k sense</text>
-<text x="756" y="334" font-size="11">(low-voltage side)</text>
-<text x="404" y="425" font-size="11">R6 1k</text>
-<text x="348" y="478" font-size="11">D1 clamp</text>
-<text x="835" y="460" font-size="11">K1 coil</text>
-<text x="835" y="474" font-size="11">HV reed relay</text>
-<text x="835" y="488" font-size="11">(+ driver, flyback)</text>
-<text x="20" y="560" font-size="12">Grip sensing: on each energise, integrate the return current through R5 (ADC, 20 kHz) -> charge Q -> C = Q / V. Contact raises C.</text>
-<text x="20" y="580" font-size="12">Release: K1 shorts the pad through R4 (tau ~1 ms). R3 always bleeds the pad to safe within seconds if anything fails.</text>
-</g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 740" width="1500" height="740" font-family="-apple-system, 'SF Pro Text', 'Helvetica Neue', Helvetica, Arial, sans-serif">
+<rect width="1500" height="740" fill="#ffffff"/>
+<text x="30" y="38" font-size="22" fill="#1a1a1a" text-anchor="start" font-weight="600">ElectroClimb foot driver v1: schematic</text>
+<text x="30" y="60" font-size="13" fill="#555" text-anchor="start" font-weight="400">One board per pad. Red = high voltage (up to 3 kV, microamps). Nets with the same name are connected. Source of truth: hardware/foot/driver/driver_board.py</text>
+<rect x="20" y="80" width="330" height="300" rx="10" fill="#f6f7f9" stroke="#c9ced6"/>
+<text x="32" y="100" font-size="13" fill="#555" text-anchor="start" font-weight="600">Leg cable and power</text>
+<rect x="40" y="110" width="100" height="160" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="50" y="130" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">J1</text>
+<text x="132" y="155" font-size="11" fill="#444" text-anchor="end" font-weight="400">1  +5V</text>
+<text x="132" y="180" font-size="11" fill="#444" text-anchor="end" font-weight="400">2  +5V_ARM</text>
+<text x="132" y="205" font-size="11" fill="#444" text-anchor="end" font-weight="400">3  GND</text>
+<text x="132" y="230" font-size="11" fill="#444" text-anchor="end" font-weight="400">4  CANH</text>
+<text x="132" y="255" font-size="11" fill="#444" text-anchor="end" font-weight="400">5  CANL</text>
+<path d="M140 151 L190 151" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<circle cx="190" cy="151" r="3" fill="#1a1a1a"/>
+<text x="197" y="155" font-size="11.5" fill="#1a1a1a" text-anchor="start" font-weight="600">+5V</text>
+<path d="M140 176 L190 176" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<circle cx="190" cy="176" r="3" fill="#1a1a1a"/>
+<text x="197" y="180" font-size="11.5" fill="#1a1a1a" text-anchor="start" font-weight="600">+5V_ARM</text>
+<path d="M140 201 L170 201" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M170 201 L170 209" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M161 209 L179 209" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M165 213 L175 213" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M168 217 L172 217" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M140 226 L190 226" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<circle cx="190" cy="226" r="3" fill="#1a1a1a"/>
+<text x="197" y="230" font-size="11.5" fill="#1a1a1a" text-anchor="start" font-weight="600">CANH</text>
+<path d="M140 251 L190 251" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<circle cx="190" cy="251" r="3" fill="#1a1a1a"/>
+<text x="197" y="255" font-size="11.5" fill="#1a1a1a" text-anchor="start" font-weight="600">CANL</text>
+<text x="40" y="295" font-size="11" fill="#444" text-anchor="start" font-weight="400">+5V → D3 schottky → 5V_XIAO.  C4 10 µF to GND.</text>
+<text x="40" y="311" font-size="11" fill="#444" text-anchor="start" font-weight="400">+5V_ARM → J2 → VHV_IN.  C2 10 µF, C3 100 nF to GND.</text>
+<text x="40" y="327" font-size="11" fill="#444" text-anchor="start" font-weight="400">J2 is the foot contact switch (a jumper for bench tests).</text>
+<text x="40" y="343" font-size="11" fill="#444" text-anchor="start" font-weight="400">+5V_ARM is cut by the arm key and the E-stop on the body.</text>
+<rect x="370" y="80" width="230" height="300" rx="10" fill="#f6f7f9" stroke="#c9ced6"/>
+<text x="382" y="100" font-size="13" fill="#555" text-anchor="start" font-weight="600">Microcontroller</text>
+<rect x="390" y="110" width="190" height="230" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="400" y="130" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">U2 XIAO ESP32-S3</text>
+<text x="398" y="155" font-size="11" fill="#444" text-anchor="start" font-weight="400">5V   5V_XIAO</text>
+<text x="398" y="180" font-size="11" fill="#444" text-anchor="start" font-weight="400">3V3  3V3</text>
+<text x="398" y="205" font-size="11" fill="#444" text-anchor="start" font-weight="400">GND</text>
+<text x="572" y="155" font-size="11" fill="#444" text-anchor="end" font-weight="400">PWM  D3</text>
+<text x="572" y="180" font-size="11" fill="#444" text-anchor="end" font-weight="400">ISENSE  D0</text>
+<text x="572" y="205" font-size="11" fill="#444" text-anchor="end" font-weight="400">VMON_ADC  D1</text>
+<text x="572" y="230" font-size="11" fill="#444" text-anchor="end" font-weight="400">RELAY  D8</text>
+<text x="572" y="255" font-size="11" fill="#444" text-anchor="end" font-weight="400">ARM_S  D9</text>
+<text x="572" y="280" font-size="11" fill="#444" text-anchor="end" font-weight="400">LED  D10</text>
+<text x="572" y="305" font-size="11" fill="#444" text-anchor="end" font-weight="400">CAN_TX  D4</text>
+<text x="572" y="330" font-size="11" fill="#444" text-anchor="end" font-weight="400">CAN_RX  D5</text>
+<text x="398" y="362" font-size="10.5" fill="#888" text-anchor="start" font-weight="400">D2, D6 and D7 are not used</text>
+<rect x="20" y="400" width="330" height="190" rx="10" fill="#f6f7f9" stroke="#c9ced6"/>
+<text x="32" y="420" font-size="13" fill="#555" text-anchor="start" font-weight="600">CAN bus</text>
+<rect x="40" y="430" width="150" height="145" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="50" y="450" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">U4 SN65HVD230</text>
+<text x="48" y="475" font-size="11" fill="#444" text-anchor="start" font-weight="400">1 D   CAN_TX</text>
+<text x="48" y="500" font-size="11" fill="#444" text-anchor="start" font-weight="400">4 R   CAN_RX</text>
+<text x="48" y="525" font-size="11" fill="#444" text-anchor="start" font-weight="400">3 VCC  3V3</text>
+<text x="48" y="550" font-size="11" fill="#444" text-anchor="start" font-weight="400">2 GND</text>
+<text x="182" y="475" font-size="11" fill="#444" text-anchor="end" font-weight="400">CANH 7</text>
+<text x="182" y="500" font-size="11" fill="#444" text-anchor="end" font-weight="400">CANL 6</text>
+<text x="182" y="525" font-size="11" fill="#444" text-anchor="end" font-weight="400">RS 8</text>
+<text x="205" y="462" font-size="11" fill="#444" text-anchor="start" font-weight="400">R19 120 Ω + jumper JP1</text>
+<text x="205" y="478" font-size="11" fill="#444" text-anchor="start" font-weight="400">between CANH and CANL,</text>
+<text x="205" y="494" font-size="11" fill="#444" text-anchor="start" font-weight="400">only on the last board.</text>
+<text x="205" y="510" font-size="11" fill="#444" text-anchor="start" font-weight="400"></text>
+<text x="205" y="526" font-size="11" fill="#444" text-anchor="start" font-weight="400">R18 10 k: RS to GND</text>
+<text x="205" y="542" font-size="11" fill="#444" text-anchor="start" font-weight="400">C8 100 nF: 3V3 to GND</text>
+<rect x="370" y="400" width="230" height="190" rx="10" fill="#f6f7f9" stroke="#c9ced6"/>
+<text x="382" y="420" font-size="13" fill="#555" text-anchor="start" font-weight="600">Status and arm sense</text>
+<text x="385" y="440" font-size="11" fill="#444" text-anchor="start" font-weight="400">LED → R15 1 k → D5 red → GND</text>
+<text x="385" y="456" font-size="10.5" fill="#888" text-anchor="start" font-weight="400">lit by firmware while the pad is live</text>
+<text x="385" y="495" font-size="11" fill="#444" text-anchor="start" font-weight="400">VHV_IN → R16 10 k → ARM_S</text>
+<text x="385" y="511" font-size="11" fill="#444" text-anchor="start" font-weight="400">ARM_S → R17 15 k → GND</text>
+<text x="385" y="530" font-size="10.5" fill="#888" text-anchor="start" font-weight="400">3 V when armed and the foot switch</text>
+<text x="385" y="546" font-size="10.5" fill="#888" text-anchor="start" font-weight="400">is closed, else 0 V</text>
+<rect x="620" y="80" width="370" height="300" rx="10" fill="#f6f7f9" stroke="#c9ced6"/>
+<text x="632" y="100" font-size="13" fill="#555" text-anchor="start" font-weight="600">Voltage setpoint: 3.3 V PWM to 0–5 V</text>
+<circle cx="645" cy="160" r="3" fill="#1a1a1a"/>
+<text x="645" y="152" font-size="11.5" fill="#1a1a1a" text-anchor="middle" font-weight="600">PWM</text>
+<path d="M645 160 L668 160" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<rect x="668" y="153" width="44" height="14" fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="690" y="148" font-size="11" fill="#1a1a1a" text-anchor="middle" font-weight="600">R1  10 k</text>
+<path d="M712 160 L815 160" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M730 160 L730 196" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M719 196 L741 196" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linejoin="round"/>
+<path d="M719 204 L741 204" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linejoin="round"/>
+<text x="714" y="204" font-size="11" fill="#1a1a1a" text-anchor="end" font-weight="400">C1 1 µ</text>
+<path d="M730 204 L730 232" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M730 232 L730 240" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M721 240 L739 240" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M725 244 L735 244" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M728 248 L732 248" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M762 160 L762 178" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<rect x="755" y="178" width="14" height="44" fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="774" y="198" font-size="11" fill="#1a1a1a" text-anchor="start" font-weight="600">R11</text>
+<text x="774" y="211" font-size="11" fill="#1a1a1a" text-anchor="start" font-weight="400">100 k</text>
+<path d="M762 222 L762 232" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M762 232 L762 240" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M753 240 L771 240" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M757 244 L767 244" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M760 248 L764 248" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M815 140 L815 220 L885 180 Z" fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="821" y="164" font-size="12" fill="#1a1a1a" text-anchor="start" font-weight="400">+</text>
+<text x="821" y="206" font-size="12" fill="#1a1a1a" text-anchor="start" font-weight="400">−</text>
+<text x="836" y="184" font-size="11" fill="#1a1a1a" text-anchor="start" font-weight="600">U3</text>
+<path d="M885 180 L908 180" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<rect x="908" y="173" width="44" height="14" fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="930" y="168" font-size="11" fill="#1a1a1a" text-anchor="middle" font-weight="600">R10  1 k</text>
+<path d="M952 180 L975 180" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<circle cx="975" cy="180" r="3" fill="#1a1a1a"/>
+<text x="975" y="172" font-size="11.5" fill="#1a1a1a" text-anchor="middle" font-weight="600">CTRL</text>
+<path d="M963 180 L963 196" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M952 196 L974 196" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linejoin="round"/>
+<path d="M952 204 L974 204" fill="none" stroke="#1a1a1a" stroke-width="2.2" stroke-linejoin="round"/>
+<text x="947" y="204" font-size="11" fill="#1a1a1a" text-anchor="end" font-weight="400">C5 100 n</text>
+<path d="M963 204 L963 232" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M963 232 L963 240" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M954 240 L972 240" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M958 244 L968 244" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M961 248 L965 248" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M896 180 L896 270 L872 270" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<rect x="828" y="263" width="44" height="14" fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="850" y="258" font-size="11" fill="#1a1a1a" text-anchor="middle" font-weight="600">R8  5.1 k</text>
+<path d="M828 270 L795 270 L795 200 L815 200" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M795 270 L795 283" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<rect x="788" y="283" width="14" height="44" fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="807" y="303" font-size="11" fill="#1a1a1a" text-anchor="start" font-weight="600">R9</text>
+<text x="807" y="316" font-size="11" fill="#1a1a1a" text-anchor="start" font-weight="400">10 k</text>
+<path d="M795 327 L795 335" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M795 335 L795 343" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M786 343 L804 343" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M790 347 L800 347" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M793 351 L797 351" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<text x="632" y="290" font-size="11" fill="#444" text-anchor="start" font-weight="400">U3 MCP6001,</text>
+<text x="632" y="306" font-size="11" fill="#444" text-anchor="start" font-weight="400">supplied from VHV_IN.</text>
+<text x="632" y="322" font-size="11" fill="#444" text-anchor="start" font-weight="400">Gain 1 + 5.1/10 = 1.51.</text>
+<text x="632" y="368" font-size="11" fill="#444" text-anchor="start" font-weight="400">PWM off or XIAO in reset: R11 holds the setpoint at 0 V.</text>
+<rect x="620" y="400" width="370" height="190" rx="10" fill="#f6f7f9" stroke="#c9ced6"/>
+<text x="632" y="420" font-size="13" fill="#555" text-anchor="start" font-weight="600">Release relay driver</text>
+<circle cx="645" cy="490" r="3" fill="#1a1a1a"/>
+<text x="645" y="482" font-size="11.5" fill="#1a1a1a" text-anchor="middle" font-weight="600">RELAY</text>
+<path d="M645 490 L690 490" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<rect x="690" y="483" width="44" height="14" fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="712" y="478" font-size="11" fill="#1a1a1a" text-anchor="middle" font-weight="600">R13  100 Ω</text>
+<path d="M734 490 L800 490" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M765 490 L765 508" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<rect x="758" y="508" width="14" height="44" fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="777" y="528" font-size="11" fill="#1a1a1a" text-anchor="start" font-weight="600">R14</text>
+<text x="777" y="541" font-size="11" fill="#1a1a1a" text-anchor="start" font-weight="400">100 k</text>
+<path d="M765 552 L765 558" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M765 558 L765 566" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M756 566 L774 566" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M760 570 L770 570" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M763 574 L767 574" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<rect x="800" y="465" width="70" height="50" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="810" y="485" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">Q1</text>
+<text x="810" y="503" font-size="11.5" fill="#444" text-anchor="start" font-weight="400">2N7002</text>
+<path d="M835 515 L835 558" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M835 558 L835 566" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M826 566 L844 566" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M830 570 L840 570" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M833 574 L837 574" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M835 465 L835 445 L900 445" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<rect x="900" y="428" width="70" height="34" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="910" y="448" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">K1 coil</text>
+<path d="M935 428 L935 415" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<text x="945" y="422" font-size="11.5" fill="#1a1a1a" text-anchor="start" font-weight="600">+5V</text>
+<text x="895" y="490" font-size="11" fill="#444" text-anchor="start" font-weight="400">D4 1N4148W</text>
+<text x="895" y="506" font-size="11" fill="#444" text-anchor="start" font-weight="400">across the coil</text>
+<text x="895" y="535" font-size="10.5" fill="#888" text-anchor="start" font-weight="400">RELAY high =</text>
+<text x="895" y="551" font-size="10.5" fill="#888" text-anchor="start" font-weight="400">pad discharged</text>
+<rect x="1010" y="80" width="470" height="510" rx="10" fill="#f6f7f9" stroke="#c9ced6"/>
+<text x="1022" y="100" font-size="13" fill="#555" text-anchor="start" font-weight="600">High voltage</text>
+<rect x="1030" y="110" width="150" height="150" rx="6" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.4"/>
+<text x="1040" y="130" font-size="13" fill="#1a1a1a" text-anchor="start" font-weight="600">U1 XP Power A30P-5</text>
+<text x="1038" y="155" font-size="11" fill="#444" text-anchor="start" font-weight="400">2 +IN  VHV_IN</text>
+<text x="1038" y="180" font-size="11" fill="#444" text-anchor="start" font-weight="400">5 CTRL  CTRL</text>
+<text x="1038" y="205" font-size="11" fill="#444" text-anchor="start" font-weight="400">1 −IN  GND</text>
+<text x="1038" y="230" font-size="11" fill="#444" text-anchor="start" font-weight="400">4 HV RTN  GND</text>
+<text x="1172" y="155" font-size="11" fill="#444" text-anchor="end" font-weight="400">HV OUT 3</text>
+<path d="M1180 151 L1203 151" fill="none" stroke="#c2185b" stroke-width="2.4" stroke-linejoin="round"/>
+<rect x="1203" y="144" width="44" height="14" fill="#fff" stroke="#c2185b" stroke-width="1.6"/>
+<text x="1225" y="139" font-size="11" fill="#c2185b" text-anchor="middle" font-weight="600">R2  47 M</text>
+<path d="M1247 151 L1450 151" fill="none" stroke="#c2185b" stroke-width="2.4" stroke-linejoin="round"/>
+<circle cx="1450" cy="151" r="3" fill="#c2185b"/>
+<text x="1450" y="143" font-size="11.5" fill="#c2185b" text-anchor="middle" font-weight="600">PAD_A</text>
+<text x="1225" y="175" font-size="10.5" fill="#c2185b" text-anchor="middle" font-weight="400">limits a short to 64 µA</text>
+<path d="M1290 151 L1290 228" fill="none" stroke="#c2185b" stroke-width="2.4" stroke-linejoin="round"/>
+<rect x="1283" y="228" width="14" height="44" fill="#fff" stroke="#c2185b" stroke-width="1.6"/>
+<text x="1302" y="248" font-size="11" fill="#c2185b" text-anchor="start" font-weight="600">R3</text>
+<text x="1302" y="261" font-size="11" fill="#c2185b" text-anchor="start" font-weight="400">1 G</text>
+<path d="M1290 272 L1290 310" fill="none" stroke="#c2185b" stroke-width="2.4" stroke-linejoin="round"/>
+<path d="M1290 310 L1290 326" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<rect x="1283" y="326" width="14" height="44" fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="1302" y="346" font-size="11" fill="#1a1a1a" text-anchor="start" font-weight="600">R7</text>
+<text x="1302" y="359" font-size="11" fill="#1a1a1a" text-anchor="start" font-weight="400">750 k</text>
+<path d="M1290 370 L1290 378" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M1290 378 L1290 386" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M1281 386 L1299 386" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M1285 390 L1295 390" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M1288 394 L1292 394" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M1290 310 L1235 310" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<rect x="1191" y="303" width="44" height="14" fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="1213" y="298" font-size="11" fill="#1a1a1a" text-anchor="middle" font-weight="600">R12  1 k</text>
+<path d="M1191 310 L1170 310" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<circle cx="1170" cy="310" r="3" fill="#1a1a1a"/>
+<text x="1163" y="314" font-size="11.5" fill="#1a1a1a" text-anchor="end" font-weight="600">VMON_ADC</text>
+<text x="1030" y="335" font-size="10.5" fill="#444" text-anchor="start" font-weight="400">C6 1 nF and clamp D2 (BAV199).</text>
+<text x="1030" y="351" font-size="10.5" fill="#444" text-anchor="start" font-weight="400">R3 with R7: 2.15 V at full voltage.</text>
+<path d="M1360 151 L1360 316" fill="none" stroke="#c2185b" stroke-width="2.4" stroke-linejoin="round"/>
+<path d="M1349 316 L1371 316" fill="none" stroke="#c2185b" stroke-width="2.2" stroke-linejoin="round"/>
+<path d="M1349 324 L1371 324" fill="none" stroke="#c2185b" stroke-width="2.2" stroke-linejoin="round"/>
+<text x="1376" y="324" font-size="11" fill="#c2185b" text-anchor="start" font-weight="400"></text>
+<path d="M1360 324 L1360 440" fill="none" stroke="#c2185b" stroke-width="2.4" stroke-linejoin="round"/>
+<text x="1376" y="318" font-size="11" fill="#c2185b" text-anchor="start" font-weight="600">pad</text>
+<text x="1376" y="332" font-size="10.5" fill="#c2185b" text-anchor="start" font-weight="400">0.5–1 nF</text>
+<path d="M1430 151 L1430 200" fill="none" stroke="#c2185b" stroke-width="2.4" stroke-linejoin="round"/>
+<path d="M1430 200 L1442 228" fill="none" stroke="#c2185b" stroke-width="2.4"/>
+<text x="1420" y="212" font-size="11" fill="#c2185b" text-anchor="end" font-weight="600">K1</text>
+<text x="1420" y="226" font-size="10.5" fill="#c2185b" text-anchor="end" font-weight="400">contact</text>
+<path d="M1430 232 L1430 368" fill="none" stroke="#c2185b" stroke-width="2.4" stroke-linejoin="round"/>
+<rect x="1423" y="368" width="14" height="44" fill="#fff" stroke="#c2185b" stroke-width="1.6"/>
+<text x="1442" y="388" font-size="11" fill="#c2185b" text-anchor="start" font-weight="600">R4</text>
+<text x="1442" y="401" font-size="11" fill="#c2185b" text-anchor="start" font-weight="400">1 M</text>
+<path d="M1430 412 L1430 440 L1360 440" fill="none" stroke="#c2185b" stroke-width="2.4" stroke-linejoin="round"/>
+<path d="M1360 440 L1230 440" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<text x="1310" y="432" font-size="10.5" fill="#888" text-anchor="middle" font-weight="400">PAD_B</text>
+<circle cx="1360" cy="440" r="3" fill="#1a1a1a"/>
+<text x="1367" y="444" font-size="11.5" fill="#1a1a1a" text-anchor="start" font-weight="600"></text>
+<path d="M1255 440 L1255 458" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<rect x="1248" y="458" width="14" height="44" fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="1267" y="478" font-size="11" fill="#1a1a1a" text-anchor="start" font-weight="600">R5</text>
+<text x="1267" y="491" font-size="11" fill="#1a1a1a" text-anchor="start" font-weight="400">10 k</text>
+<path d="M1255 502 L1255 512" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M1255 512 L1255 520" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M1246 520 L1264 520" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M1250 524 L1260 524" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<path d="M1253 528 L1257 528" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<rect x="1186" y="433" width="44" height="14" fill="#fff" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="1208" y="428" font-size="11" fill="#1a1a1a" text-anchor="middle" font-weight="600">R6  1 k</text>
+<path d="M1186 440 L1170 440" fill="none" stroke="#1a1a1a" stroke-width="1.6" stroke-linejoin="round"/>
+<circle cx="1170" cy="440" r="3" fill="#1a1a1a"/>
+<text x="1163" y="444" font-size="11.5" fill="#1a1a1a" text-anchor="end" font-weight="600">ISENSE</text>
+<text x="1030" y="470" font-size="10.5" fill="#444" text-anchor="start" font-weight="400">Clamp D1 (BAV199).</text>
+<text x="1030" y="486" font-size="10.5" fill="#444" text-anchor="start" font-weight="400">The pad's charging current</text>
+<text x="1030" y="502" font-size="10.5" fill="#444" text-anchor="start" font-weight="400">returns through R5: 0.64 V peak.</text>
+<text x="1030" y="518" font-size="10.5" fill="#444" text-anchor="start" font-weight="400">Its integral is the pad's charge,</text>
+<text x="1030" y="534" font-size="10.5" fill="#444" text-anchor="start" font-weight="400">and charge / voltage is the grip signal.</text>
+<text x="30" y="630" font-size="12" fill="#333" text-anchor="start" font-weight="400">How it works: the XIAO sets the pad voltage with PWM. U3 scales it to the 0–5 V the module's control pin needs. R3 and R7 report the real pad voltage, so the firmware can</text>
+<text x="30" y="646" font-size="12" fill="#333" text-anchor="start" font-weight="400">close the loop: the module is not regulated and overshoots at light load. K1 with R4 empties the pad in about 1 ms for a fast release.</text>
+<text x="30" y="662" font-size="12" fill="#333" text-anchor="start" font-weight="400">Safety: R3 always bleeds the pad (time constant 0.5 s). The arm key, the E-stop and the foot switch cut VHV_IN in hardware, without the microcontroller.</text>
+<text x="30" y="678" font-size="12" fill="#333" text-anchor="start" font-weight="400">Not yet verified on a bench: every value. K1 closes onto up to 3 kV, above its 1 kV switching rating (through 1 MΩ: 3 mA, 4.5 mJ). See the driver README.</text>
 </svg>
