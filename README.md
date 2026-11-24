@@ -32,6 +32,27 @@
 <p align="center"><img src="media/climb_pillar.gif" width="300" alt="Simulated ElectroClimb robot climbing a 40 cm concrete pillar"></p>
 <p align="center"><em>MuJoCo simulation, vertical wall and a 40 cm concrete pillar, 2× speed: baseline crawl gait with electroadhesive feet, 18 cm in 20 s without falling. Real physics, not an animation.</em></p>
 
+<details>
+<summary>Contents</summary>
+
+- [The model](#the-model)
+- [Repository](#repository)
+- [Why](#why)
+- [What makes it new](#what-makes-it-new)
+- [How it works](#how-it-works)
+- [AI in ElectroClimb](#ai-in-electroclimb)
+- [New idea: WallScan, feet that see inside the wall](#new-idea-wallscan-feet-that-see-inside-the-wall)
+- [The robot](#the-robot)
+- [The learning](#the-learning)
+- [Roadmap](#roadmap)
+- [Hard problems](#hard-problems)
+- [Who it's for](#who-its-for)
+- [License](#license)
+- [Author](#author)
+- [Related work](#related-work)
+
+</details>
+
 ## The model
 
 <p align="center">
