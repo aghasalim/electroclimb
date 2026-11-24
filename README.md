@@ -203,7 +203,8 @@ The pads that hold the robot could also scan the wall. With each pad's comb spli
 
 ## License
 
-Hardware: CERN-OHL-S v2. Software, firmware and models: MIT.
+Software, firmware and models: MIT, see [`LICENSE`](LICENSE).
+Hardware design files in `hardware/`: CERN-OHL-S v2, see [`hardware/LICENSE`](hardware/LICENSE).
 
 ## Author
 
