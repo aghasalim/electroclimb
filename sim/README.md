@@ -227,6 +227,8 @@ Each foot lands at its home point turned by `yaw` and moved by `(dx, dy)`; the b
 | Sideways | 10.3 cm, slides 2.1 cm down | 10.3 cm |
 | Turn on the spot | 28°, slides 3.6 cm down | 28° |
 
+<p align="center"><img src="../media/steer_wall.gif" width="400" alt="Simulated robot climbing, turning on the spot, walking across and stepping sideways on a wall"></p>
+
 It can walk in any direction and turn on both surfaces. On the wall it slides down a little during sideways steps and turns, and walking down it moves further than commanded.
 
 ### Wall to ceiling ([`corner.py`](corner.py))
