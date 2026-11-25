@@ -60,7 +60,7 @@ Prices are rough, from distributor listings in November 2026. Check them before 
 
 After printing, check: the M4 nut slides into the slot in the flange, the two nubs fit the adapter's sockets, and the carbon tube slides 22 mm into the socket.
 
-The neck is the ankle spring. With TPU at E ≈ 26 MPa its bending stiffness is about 6 N·m/rad, the value used in simulation. Real TPU varies by about ±50 %, so measure it (step 6) and change `neck_d` if needed: stiffness grows with the fourth power of the diameter.
+The neck is the ankle: a **soft pivot**, 4.5 mm thick and 5 mm long. With TPU at E ≈ 26 MPa its bending stiffness is about 0.1 N·m/rad, and the cone under the flange lies down on the plate at about 45° of tilt, which is the end stop. It is this soft on purpose (changed 25 November 2026): with the earlier 14 mm neck (6 N·m/rad) the simulated pads stood on an edge and the robot fell as soon as pads only gripped when flat; see [`sim/README.md`](../../sim/README.md#flat-pads-steering-the-corner-and-the-ceiling-trot). `foot_cad.py` checks the neck by beam theory: 35 % strain at 45°, buckling at 52 N (the largest push in simulation is about 20 N), 0.9 MPa at the full 15 N pull. Real TPU varies by about ±50 %, so measure it (step 6) and change `neck_d` if needed: stiffness grows with the fourth power of the diameter. Not checked: fatigue over many cycles, and how much the thin neck lets the pad twist or shift sideways.
 
 ## Assemble
 
@@ -69,7 +69,7 @@ The neck is the ankle spring. With TPU at E ≈ 26 MPa its bending stiffness is 
 3. **Nut.** Slide the M4 nut into the slot in the flange.
 4. **Adapter.** Seat the adapter on the two nubs and fasten it with the M4 × 12 screw from the top. Snug only; TPU compresses.
 5. **Tube.** Push the carbon tube 22 mm into the socket and tighten the M3 clamp screw.
-6. **Check the ankle.** Hold the tube and push the pad edge sideways with a scale: tilting the pad 10° (0.17 rad) at 40 mm from the centre should take about 25 N if the stiffness is 6 N·m/rad. Note the real value.
+6. **Check the ankle.** Hold the tube and push the pad edge sideways with a scale: tilting the pad 20° (0.35 rad) at 40 mm from the centre should take about 0.9 N (90 g on the scale) if the stiffness is 0.1 N·m/rad. It must stay at or under 0.15 N·m/rad: in simulation the robot climbs walls and ceilings up to that value, only walls up to 0.25, and nothing from 0.3 on. The printed value has just a 50 % margin, which is also how much TPU varies, so do measure it. Note the real value.
 
 ## Level 1: WallScan bench test (no high voltage)
 

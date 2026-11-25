@@ -7,7 +7,7 @@
 Two printed parts, dimensions in mm, foot frame: z = away from the wall, pad face at z = 0.
 
   foot_carrier_tpu   TPU 95A, one piece: the plate the flex-PCB pad is glued under, a round
-                     flexure neck (the 2-axis spring ankle) and a flange with a captive M4 nut.
+                     thin flexure neck (the soft 2-axis ankle) and a flange with a captive M4 nut.
   shin_adapter_petg  PETG or PA-CF: bolts onto the flange with one M4 screw, clamps the
                      10 mm carbon shin tube at the angle it has when the robot stands.
 
@@ -26,8 +26,11 @@ PARAMS = dict(
     plate_margin=2.0,              # carrier plate is this much larger than the pad on each side
     plate_t=2.0,                   # thin, so the pad can follow a rough wall
     plate_r=6.0,
-    neck_d=14.0, neck_len=8.0,     # flexure: bending stiffness ~ E * pi d^4 / (64 L)
-    flange_d=30.0, flange_t=7.4,
+    neck_d=4.5, neck_len=5.0,      # flexure: bending stiffness ~ E * pi d^4 / (64 L). Soft on purpose:
+                                   # the pad must lie flat by itself (sim/flat.py: 0.1 N*m/rad, +-45 deg)
+    ankle_travel_deg=45.0,
+    pad_pull_n=15.0, press_n=20.0, # largest pull on the pad and largest push through the neck
+    flange_d=30.0, flange_t=4.15,  # thinner than before: the longer cone below it holds part of the nut pocket
     nut_af=7.0, nut_t=3.2,         # M4 hex nut (ISO 4032)
     bolt_d=4.4,                    # M4 clearance
     nub_d=4.0, nub_h=2.0, nub_y=10.0,   # two anti-rotation nubs
@@ -107,6 +110,15 @@ def flexure_stiffness(p=PARAMS):
     return p["tpu_E_mpa"] * inertia / p["neck_len"] / 1000
 
 
+def neck_checks(p=PARAMS):
+    """Strain at full travel, buckling load and pull stress of the neck (beam theory)."""
+    d, L, E = p["neck_d"], p["neck_len"], p["tpu_E_mpa"]
+    strain = d / 2 * math.radians(p["ankle_travel_deg"]) / L
+    buckle = math.pi ** 2 * E * (math.pi * d ** 4 / 64) / (2 * L) ** 2      # N, worst case: one end free
+    pull = p["pad_pull_n"] / (math.pi * d ** 2 / 4)                          # MPa
+    return strain, buckle, pull
+
+
 def check(car, adp, z_top, p=PARAMS):
     for name, part in (("carrier", car), ("adapter", adp)):
         solid = part.val()
@@ -121,7 +133,12 @@ def check(car, adp, z_top, p=PARAMS):
     nub_vol = 2 * math.pi * (p["nub_d"] / 2) ** 2 * p["nub_h"]
     assert vol <= nub_vol * 0.02, f"parts collide ({vol:.1f} mm3)"     # nubs sit in oversized sockets
     assert p["plate_t"] >= 1.6 and p["socket_wall"] >= 2.4, "walls too thin to print"
-    assert 3.0 <= flexure_stiffness(p) <= 12.0, "ankle stiffness far from the simulated 6 N*m/rad"
+    assert 0.03 <= flexure_stiffness(p) <= 0.15, "ankle stiffness outside the range that climbs in sim/flat.py"
+    strain, buckle, pull = neck_checks(p)
+    assert strain <= 0.5, f"neck strain {strain:.0%} at full travel: too much for TPU in fatigue"
+    assert buckle >= 2 * p["press_n"], f"neck buckles at {buckle:.0f} N"
+    assert pull <= 3.0, f"neck pull stress {pull:.1f} MPa"
+    # the 45 deg cone under the flange lies down on the plate at 45 deg of tilt: that is the end stop
     return placed
 
 
@@ -141,7 +158,9 @@ def main():
     print(f"carrier  {bb.xlen:.0f} x {bb.ylen:.0f} x {bb.zlen:.1f} mm, {tpu:.1f} g solid TPU")
     bb = adp.val().BoundingBox()
     print(f"adapter  {bb.xlen:.0f} x {bb.ylen:.0f} x {bb.zlen:.1f} mm, {petg:.1f} g solid PETG")
-    print(f"ankle stiffness {flexure_stiffness():.1f} N*m/rad (simulation uses 6)")
+    strain, buckle, pull = neck_checks()
+    print(f"ankle stiffness {flexure_stiffness():.2f} N*m/rad (sim/flat.py uses 0.1), neck strain {strain:.0%} at "
+          f"{PARAMS['ankle_travel_deg']:.0f} deg, buckles at {buckle:.0f} N, pull stress {pull:.1f} MPa")
     print("checks passed: valid solids, one piece each, no collision, printable walls")
 
 

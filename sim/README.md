@@ -175,6 +175,111 @@ All on the 40 hard test walls with split pads, trained on the second Mac (M5 Max
 - **Curriculum** gives the best climb (11.5 cm) but no extra walls.
 - **Teacher-student works:** the student copies the teacher exactly (imitation loss < 0.0001) using only sensors the robot has. But the teacher itself gained nothing from knowing the true grip, which confirms that walls 15, 17 and 30 are a force-margin problem, not a perception problem.
 
+## Flat pads, steering, the corner and the ceiling trot
+
+Added on 25 November 2026. Files: [`steer.py`](steer.py), [`flat.py`](flat.py), [`eval_flat.py`](eval_flat.py), [`corner.py`](corner.py), [`tune_trot.py`](tune_trot.py), [`render_corner.py`](render_corner.py).
+
+<p align="center"><img src="../media/corner.gif" width="420" alt="Simulated robot going from a wall onto a ceiling through an inside corner"></p>
+
+### A weakness in the original simulation
+
+MuJoCo's adhesion pulls with full force as soon as any part of a pad touches. Measured on the original crawl gait: **the pads stand on an edge, tilted about 30° to the wall, for most of every step**, and still grip. The gait lands each foot 4 cm ahead of the point where its pad is parallel to the body, and the 6 N·m/rad ankle is far too stiff to let the pad lie down. A real electroadhesive pad needs area contact, so every earlier result on this page is too kind.
+
+[`flat.py`](flat.py) takes the gift away. Grip is scaled by flatness (full below 3° of tilt, none above 8°), and the gait only counts a pad as placed when it touches and lies flat. The gait itself is unchanged.
+
+| Ankle stiffness, flat-only pads, same crawl gait | Wall | Ceiling |
+|---|---|---|
+| 6 N·m/rad (the original foot), 2, 1, 0.5, 0.3 | falls | falls |
+| 0.25, 0.2 | climbs | falls |
+| **0.15, 0.12, 0.1 (used), 0.03** | **climbs** | **climbs** |
+
+**The fix is the ankle alone:** a soft pivot of 0.1 N·m/rad with ±45° of travel. The pad touches with an edge and lies down under a push of well under 1 N. One modelling detail mattered: the model gave the passive ankle the rotor inertia of a servo, which made the free pad swing for seconds; `flat.py` gives it the inertia of a pad. (An earlier version of this section said the feet also had to land at a different point. That was an effect of the swinging pad and is not needed.) The foot CAD now has this ankle: a 4.5 mm TPU neck, 0.1 N·m/rad by beam theory, not yet printed or measured (see [`hardware/foot/BUILD.md`](../hardware/foot/BUILD.md)).
+
+### The 40 hard walls again ([`eval_flat.py`](eval_flat.py))
+
+Same walls, same gait, same success rule as the tables above (no fall and at least 10 cm in 20 s); only the grip rule and the ankle differ.
+
+| Crawl gait, split pads | Success | Falls | Climbed |
+|---|---|---|---|
+| Original simulation (pads grip on an edge) | 88 % | 12 % | 10.9 cm |
+| **Flat-only pads** | **42 %** | **18 %** | 2.3 cm |
+| Flat-only, +10 % pad force | 60 % | 5 % | 7.8 cm |
+| Flat-only, +20 % pad force | 80 % | 0 % | 10.1 cm |
+| Flat-only, +30 % pad force | 88 % | 0 % | 10.4 cm |
+| **Flat-only, gait clock 12 % faster** | **82 %** | **15 %** | 6.5 cm |
+| Flat-only, clock 12 % faster, +10 % pad force | 92 % | 5 % | 11.4 cm |
+| Flat-only, clock 12 % faster, +20 % pad force | 98 % | 0 % | 14.0 cm |
+| PPO + curriculum, retrained on flat-only pads (3M steps) | 42 % | 15 % | 3.5 cm |
+
+- **Unchanged, the gait drops from 88 % to 42 %.** Most of that is slowness, not falls: waiting for each pad to lie flat slows the gait, and the walls without a fall climb 9.3 cm on average, just under the 10 cm line.
+- **A 12 % faster gait clock brings it back to 82 %,** with slightly fewer falls. Faster still does not help much (25 %: 80 %, 60 %: 85 %). Standing 7 mm lower makes it much worse (25 %, 40 % falls); 7 mm higher gives 50 %.
+- **The falls are a grip question, as before:** they are all on walls with grip below 70 %, and 10 % more pad force with the faster clock gives 92 %.
+- **Retrained RL does not beat the gait.** PPO with the curriculum, the best earlier recipe, trained for 3M steps under the flat rule (`ELECTROCLIMB_FLAT=1 train.py --curriculum`): 42 % on the hard walls, the same as the unchanged gait, with 15 % falls instead of 18 %; on the easier "holdable" walls 92 % against 85 %. The policy may speed the clock up by 25 % but did not learn to. Small random joint corrections alone cost the gait its successes here, so exploration is harder than in the original simulation. The teacher-student and SAC runs were not repeated.
+
+### Steering ([`steer.py`](steer.py), [`flat.py`](flat.py))
+
+Each foot lands at its home point turned by `yaw` and moved by `(dx, dy)`; the body shift then moves and turns the body. Sideways motion uses the hip abduction joints. Five gait cycles each, flat-only pads, full grip:
+
+| Command | Wall | Ceiling |
+|---|---|---|
+| Forwards | 18.6 cm in 27 s | 20.9 cm in 27 s |
+| Backwards (down the wall) | 22.9 cm | 20.4 cm |
+| Sideways | 10.3 cm, slides 2.1 cm down | 10.3 cm |
+| Turn on the spot | 28°, slides 3.6 cm down | 28° |
+
+It can walk in any direction and turn on both surfaces. On the wall it slides down a little during sideways steps and turns, and walking down it moves further than commanded.
+
+### Wall to ceiling ([`corner.py`](corner.py))
+
+<p align="center"><img src="../media/corner.png" width="900" alt="Five moments of the corner move"></p>
+
+The body follows a "ladder" path: it climbs until the front hips are about 11 cm under the ceiling, the front legs reach up and land flat on the ceiling, then the body turns 90° while the hind feet walk up the wall and the front feet walk out along the ceiling, and last the hind feet change over. A foot may only land where its pad is flat, and from a given hip there are at most two such places per surface, so the plan is a short search.
+
+| | Result |
+|---|---|
+| Full run in MuJoCo, full grip, simulation joint limits | reaches the ceiling in 85 s (14 leg-pair steps), then walks on under the ceiling |
+| Same with the printed parts' limits (hip −90…+60°, knee 0…80°) | reaches the ceiling in 112 s (20 leg-pair steps) |
+| Peak joint torque | 1.2 N·m (the STS3215 is rated about 1 N·m) |
+| Grip at 90 % or less | **falls** at 22° of the turn, when one front pad holds alone |
+| Hip limited to +40° (the CAD before 25 November) | **no plan**: the hind legs get stuck at 62° |
+| Sensitivity | the outward pull must be about 2 mm; of 1, 2, 3 and 4 mm only 2 mm works with the printed limits (1 to 3 mm with the simulation limits) |
+
+So the corner works in simulation, with no grip margin and little tolerance in its settings. The hip CAD was changed to give the +60° it needs ([`hardware/robot/cad`](../hardware/robot/cad/README.md)), and the commanded joint speed is limited to 250°/s, about what the servo can do. Three things it needs that the plain gait does not:
+
+- **Reach up from lower.** From the normal standing height the hip would need more than 90° to put a pad flat on the ceiling.
+- **Pull outwards with the front legs.** The weight hangs further from the wall than the front pads are, so they would have to pull with more than the weight. A 2 mm outward command presses the hind pads on the wall and unloads the ceiling pads.
+- **Correct every landing.** The body is never exactly on its planned path, so each landing point slides along the surface until the pad is parallel, and each landed foot pulls back to its planned point so the sag does not add up.
+
+### Two pads on the ceiling ([`flat.py`](flat.py) `TrotGait`, [`tune_trot.py`](tune_trot.py))
+
+Two diagonal legs step together, so only two pads hold. Two pads on soft ankles are a hinge: the body swings freely about the line between them. Under a ceiling it hangs like a pendulum and is level only while its centre of mass is under that line, so the standing pair pulls the body forward and sideways at the same time (`sway`). Without the sway it falls within 3 s.
+
+<p align="center"><img src="../media/trot_ceiling.gif" width="360" alt="Simulated robot trotting under a ceiling on two pads at a time"></p>
+
+The six trot numbers (stride, sway, two balance-feedback gains on the body's lean, swing height, clock speed) were found by policy search, the cross-entropy method: 12 generations of 32 walks, scored by distance over 20 s at 100, 90 and 80 % grip.
+
+| Ceiling trot, flat-only pads | Result |
+|---|---|
+| Speed at full grip | 59 cm in 20 s (about 3 cm/s), against 0.9 cm/s for the crawl |
+| Grip 85 % or more | 8 of 8 walks without a fall (parameters varied by 2 %) |
+| Grip 80 % | 2 of 8 |
+| Without sway and feedback | falls |
+| Turning and sideways | work at full grip; sideways drives the servos to their 3 N·m limit |
+| Backwards | falls |
+
+Two pads must carry 14.3 N, so 48 % grip is the hard floor; the trot needs 85 %. It is fast but has much less margin than the crawl, which keeps three pads on.
+
+On a wall this gait cannot work with soft ankles: gravity always turns the body about the hinge line, and nothing resists it.
+
+```bash
+../.venv/bin/python steer.py           # steering on the original physics
+../.venv/bin/python flat.py            # crawl and trot with flat-only pads
+../.venv/bin/python eval_flat.py       # the 40 hard walls with flat-only pads
+../.venv/bin/python corner.py          # plan and run the corner
+../.venv/bin/python tune_trot.py       # search the trot parameters (about 10 minutes)
+../.venv/bin/python render_corner.py   # media/corner.gif
+```
+
 ## Physics checks ([`check_physics.py`](check_physics.py))
 
 | Case | Result |

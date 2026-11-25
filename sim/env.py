@@ -31,8 +31,8 @@ def gravity_for_tilt(tilt_deg):
 class ClimbEnv:
     def __init__(self, tilt_deg=90.0, frame_skip=10, episode_s=10.0,
                  randomise=True, fail_prob=1e-4, drop_level=0.5, seed=None,
-                 surface_range=(0.4, 1.0), humidity_range=(0.7, 1.0)):
-        self.model = mujoco.MjModel.from_xml_path(str(XML))
+                 surface_range=(0.4, 1.0), humidity_range=(0.7, 1.0), model=None):
+        self.model = model or mujoco.MjModel.from_xml_path(str(XML))
         self.data = mujoco.MjData(self.model)
         self.tilt_deg, self.frame_skip, self.randomise = tilt_deg, frame_skip, randomise
         self.fail_prob = fail_prob

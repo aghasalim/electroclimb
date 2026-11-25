@@ -189,6 +189,8 @@ flowchart LR
 
 ## Results
 
+> **Read this first.** The numbers in this section come from the original simulation, where a pad grips with full force as soon as any part of it touches. Checked on 25 November 2026: in those runs the pads stood on an edge, tilted about 30°, for most of each step. A real pad needs flat contact, so these numbers are too kind. With flat-only grip and a soft ankle the robot still climbs, steers, turns the wall-to-ceiling corner and trots under a ceiling, but on the 40 hard walls the unchanged crawl gait then succeeds on **42 %, not 88 %**. A 12 % faster gait clock brings it to 82 %, and PPO retrained under that rule stays at 42 %. See [`sim/README.md`](../sim/README.md#flat-pads-steering-the-corner-and-the-ceiling-trot).
+
 Success = no fall and at least 10 cm climbed in 20 s, on 40 hard vertical test walls (grip 44–100 %).
 
 | | Success | Falls |

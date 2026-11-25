@@ -72,12 +72,14 @@ Servo bodies are held by thin plates on their two faces, fastened with the M2 se
 | Joint | Free range found | Simulation range | What stops it |
 |---|---|---|---|
 | Abduction | −30° … +30° | −30° … +30° | – |
-| Hip | −90° … +40° | −90° … +90° | Foot adapter hits the chassis at +50° |
+| Hip | −90° … +60° | −90° … +90° | Thigh hits the abduction servo at +70° |
 | Knee | 0° … 80° | 0° … 150° | Foot adapter hits the thigh crossbar at 90° |
 
 **The climbing gait fits.** Every leg pose the crawl gait uses on a vertical wall in simulation (hip −61° … −23°, knee 57° … 80°, 64 poses of a front and a hind leg) was tested against these parts, each also with 3° more knee bend: no collision. The gait runs right up to the knee limit, so there is no room for a longer stride without changing the thigh crossbar.
 
-Sample poses (hip, knee): (−60, 20) free, (0, 80) free, (−60, 140), (+60, 20) and (+60, 140) collide. **The simulation's knee range above about 80° and hip range above about +40° cannot be reached by this hardware**; the simulation should be limited to match. The stance knee angle is 57°, so only about 23° of extra knee flexion is left.
+**The wall-to-ceiling corner fits (changed 25 November 2026).** The corner needs the hind hips at +60°; the parts were free only to +55° (single-joint test: +40°). `relief()` in `robot_cad.py` now trims what touched: 28 mm³ off a corner of each thigh plate, 201 mm³ off each hip bracket and 118 mm³ off the chassis edge. `check()` tests 47 leg poses sampled from the corner plan ([`sim/corner.py`](../../../sim/corner.py), `LIMITS_CAD`): front hip −83° … +53°, hind hip −23° … +60°, knee 0° … 57°, all free. The simulated corner run with these limits reaches the ceiling. Not checked: these poses combined with abduction.
+
+Sample poses (hip, knee): (−60, 20), (0, 80) and (+60, 20) free, (−60, 140) and (+60, 140) collide. **The simulation's knee range above about 80° and hip range above about +60° cannot be reached by this hardware**; the simulation should be limited to match. The stance knee angle is 57°, so only about 23° of extra knee flexion is left.
 
 ## NOT verified
 

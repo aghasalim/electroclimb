@@ -333,10 +333,52 @@ def build(p=PARAMS):
     tube = cyl((ff["x_stop"], 0, -ff["off"]), (1, 0, 0), p["tube_d"] / 2, ff["tube_len"]).cut(
         cyl((ff["x_stop"], 0, -ff["off"]), (1, 0, 0), p["tube_d"] / 2 - 1.0, ff["tube_len"]))
     foot = lambda name: cq.importers.importStep(str(FOOT / f"{name}.step"))
-    return dict(chassis=chassis(p), top_cover=top_cover(p), abd_bracket=abd_bracket(p), thigh=thigh(p),
-                shin_link=shin_link(p), servo=servo_dummy(p), tube=tube, ff=ff,
-                carrier=put(foot("foot_carrier_tpu"), ff["origin"], ff["xf"], ff["zf"]),
-                adapter=put(foot("shin_adapter_petg"), ff["origin"] + ff["zf"] * ff["z_top"], ff["xf"], ff["zf"]))
+    P = dict(chassis=chassis(p), top_cover=top_cover(p), abd_bracket=abd_bracket(p), thigh=thigh(p),
+             shin_link=shin_link(p), servo=servo_dummy(p), tube=tube, ff=ff,
+             carrier=put(foot("foot_carrier_tpu"), ff["origin"], ff["xf"], ff["zf"]),
+             adapter=put(foot("shin_adapter_petg"), ff["origin"] + ff["zf"] * ff["z_top"], ff["xf"], ff["zf"]))
+    return relief(P, p)
+
+
+HIP_MAX = 60        # deg. The wall-to-ceiling corner needs the hind hips at 60 (sim/corner.py LIMITS_CAD)
+KNEES = (0, 20, 40, 57)
+CORNER_POSES = dict(      # (hip, knee) in degrees that the corner plan passes through, sampled
+    front=[(h, k) for h in (-83, -60, -30, 0, 30) for k in KNEES] + [(40, 10), (45, 20), (53, 0)],
+    hind=[(h, k) for h in (-23, 0, 30, 50, 56, HIP_MAX) for k in KNEES])
+
+
+def relief(P, p=PARAMS):
+    """Trim the thigh and the hip bracket where the leg touches between 55 and HIP_MAX degrees of hip.
+
+    Untrimmed, the leg is free up to 55 deg. Above that a corner of the thigh plate runs into the
+    bracket and the chassis, and the folded foot adapter into the bracket: a few mm3 each. The cuts
+    are swept 2 deg past HIP_MAX for clearance."""
+    O, Y, hy = (0, 0, 0), (0, 1, 0), p["hip_y"]
+    bt = math.degrees(math.atan2(-THIGH[2], THIGH[0]))
+    thigh0, bracket0 = P["thigh"], P["abd_bracket"]
+    thigh_v, bracket_v = thigh0.val().Volume(), bracket0.val().Volume()
+    thigh_new, bracket_new = thigh0, bracket0
+    for front in (True, False):
+        j0 = V(p["hip_x"] if front else -p["hip_x"], p["abd_y"], 0)
+        for hip in range(56, HIP_MAX + 3, 2):
+            for fixed in (P["chassis"].translate((-j0).toTuple()), bracket0):      # into the thigh's own frame
+                thigh_new = thigh_new.cut(fixed.translate((0, -hy, 0)).rotate(O, Y, -(bt + hip)))
+            for knee in (46, 50, 54, 58):
+                for name, solid, _ in leg(P, "x", front, True, 0.0, hip, knee, p):
+                    if name in ("x_foot_adapter", "x_foot_carrier"):
+                        bracket_new = bracket_new.cut(solid.translate((-j0).toTuple()))
+    # the folded foot adapter also grazes the chassis edge from 50 deg on (knee near 57)
+    chassis_new, chassis_v = P["chassis"], P["chassis"].val().Volume()
+    for front in (True, False):
+        for hip in range(48, HIP_MAX + 3, 2):
+            for knee in (54, 58):
+                for name, solid, _ in leg(P, "x", front, True, 0.0, hip, knee, p):
+                    if name == "x_foot_adapter":
+                        chassis_new = chassis_new.cut(solid).cut(solid.mirror("XZ"))
+    P = dict(P, thigh=thigh_new, abd_bracket=bracket_new, chassis=chassis_new)
+    P["relief"] = (thigh_v - thigh_new.val().Volume(), bracket_v - bracket_new.val().Volume(),
+                   chassis_v - chassis_new.val().Volume())
+    return P
 
 
 WHITE, DARK, SERVO, CARBON, TPU = (0.92, 0.93, 0.95), (0.2, 0.21, 0.23), (0.1, 0.1, 0.11), (0.05, 0.05, 0.06), (0.13, 0.13, 0.15)
@@ -506,6 +548,13 @@ def check(P, p=PARAMS):
         hits = overlaps(leg(P, "fl", True, True, 0.0, hip, knee_a) + leg(P, "hl", False, True, 0.0, hip, knee_a), fixed)
         report.append(f"sample pose hip {hip:+d}, knee {knee_a}: " + ("free" if not hits else f"COLLISION {hits[0][0]} x {hits[0][1]}"
                       + (f" and {len(hits) - 1} more" if len(hits) > 1 else "")))
+    # 4b. every pose the wall-to-ceiling corner passes through (sim/corner.py)
+    for name, front in (("front", True), ("hind", False)):
+        for hip, knee_a in CORNER_POSES[name]:
+            hits = overlaps(leg(P, "l", front, True, 0.0, hip, knee_a), fixed)
+            assert not hits, f"corner pose {name} hip {hip}, knee {knee_a}: {hits}"
+    report.append(f"corner poses free: front hip -83..53, hind hip -23..{HIP_MAX}, knee 0..57 deg, {sum(map(len, CORNER_POSES.values()))} poses "
+                  f"(relief cuts: {P['relief'][0]:.0f} mm3 off each thigh, {P['relief'][1]:.0f} mm3 off each hip bracket, {P['relief'][2]:.0f} mm3 off the chassis)")
     # 5. wall rule for the structural parts (the cover and the cable ribs are not structural)
     assert min(p["arm_t"], p["ear_t"], p["plate_t"], p["tube_wall"]) >= 2.4, "structural wall under 2.4 mm"
     assert p["tether_wall"] >= 5.0 and p["tether_d"] == 6.0, "tether eye too weak"

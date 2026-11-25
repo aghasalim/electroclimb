@@ -23,7 +23,7 @@
   <a href="#roadmap">Roadmap</a>
 </p>
 
-> **Status:** everything here runs in simulation. The simulated robot climbs a vertical wall; the foot hardware (stage 1) is in progress. See [`hardware/foot/`](hardware/foot/) and [`sim/`](sim/).
+> **Status:** everything here runs in simulation. **New (25 Nov 2026):** the robot now steers in any direction, goes from a wall onto a ceiling through a corner and trots under a ceiling on two pads, all with pads that only grip when flat. The same check showed the earlier results were too kind (pads gripped on their edges; the 88 % on hard walls becomes 42 %, or 82 % with a faster gait clock) and that the ankle must be much softer (the foot and hip CAD are changed to match, not yet printed): [`sim/README.md`](sim/README.md#flat-pads-steering-the-corner-and-the-ceiling-trot). The simulated robot climbs a vertical wall; the foot hardware (stage 1) is in progress. See [`hardware/foot/`](hardware/foot/) and [`sim/`](sim/).
 
 <p align="center">
   <img src="media/climb_wall_front.gif" width="300" alt="Simulated ElectroClimb robot climbing a vertical wall, front view">

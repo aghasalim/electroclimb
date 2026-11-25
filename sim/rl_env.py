@@ -11,11 +11,17 @@ Pad voltages stay with the gait (always full on stance feet): in run 1, letting 
 lower them made random exploration drop the robot.
 Everything the gait cannot see (weak grip, a pad failing, humidity) is what RL is for.
 """
+import os
+
 import gymnasium as gym
 import numpy as np
 
 from crawl_gait import CrawlGait
 from env import FEET, ClimbEnv
+
+# ELECTROCLIMB_FLAT=1 switches every environment made here to flat.py's physics, for training
+# and for evaluation:   ELECTROCLIMB_FLAT=1 ../.venv/bin/python train.py --out runs_flat
+FLAT = os.environ.get("ELECTROCLIMB_FLAT") == "1"
 
 RESIDUAL = 0.05          # max joint correction, in the env's action units
 TRAIN_TILTS = (75.0, 90.0)   # train where it is hard (run 1 used 45..90 and learned to rush)
@@ -36,7 +42,10 @@ class ResidualClimbEnv(gym.Env):
     def __init__(self, tilt_range=TRAIN_TILTS, episode_s=20.0, seed=None, use_policy=True,
                  surface_range=HOLDABLE_GRIP, humidity_range=(0.9, 1.0), fail_prob=3e-3,
                  privileged=False):
-        self.env = ClimbEnv(episode_s=episode_s, randomise=True, fail_prob=fail_prob, seed=seed,
+        make_env = ClimbEnv
+        if FLAT:                                      # honest pads: grip only when flat, soft ankle
+            from flat import FlatEnv as make_env
+        self.env = make_env(episode_s=episode_s, randomise=True, fail_prob=fail_prob, seed=seed,
                             surface_range=surface_range, humidity_range=humidity_range)
         self.tilt_range, self.use_policy = tilt_range, use_policy
         self.rng = np.random.default_rng(seed)
