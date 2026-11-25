@@ -138,6 +138,23 @@ mindmap
 - **Physics:** the pads press the robot against the wall and friction carries the weight: 0.6 × pads × 15 N × grip must beat 14.3 N. With three pads that needs at least 53 % grip. The weight 9 cm from the wall also tries to peel the upper feet off (about 6.4 N), which is why the body crouches low.
 - **Electronics:** each pad half has its own high-voltage driver board (XP Power A30P-5, 0–3 kV, microamp-limited), with a 1 GΩ safety bleeder and a reed relay that releases the pad in about 1 ms. The board is designed and rule-checked, not built: [`hardware/foot/driver/`](hardware/foot/driver/).
 
+### How the feet stick
+
+On a floor the robot needs no adhesion: gravity holds it down. On walls and ceilings it uses electroadhesion.
+
+1. **The pad is a flexible circuit board.** Under a thin insulating layer it has two comb-shaped electrodes that interleave like fingers of two hands.
+2. **A high voltage goes across the two combs:** 1 to 3 kV, one comb positive and one negative. The current is only microamps, so a pad uses well under a watt.
+3. **The surface responds.** The electric field shifts charges inside the wall material under the pad. Opposite charges attract, so the pad is pulled onto the wall.
+4. **On a wall, friction carries the weight.** The pull presses the pad against the surface and friction stops it sliding down. Under a ceiling the pull itself carries the weight.
+5. **Switching off releases the foot.** A relay discharges the pad in about 1 ms, so the leg can lift and step.
+
+It needs no air-tight seal like suction and no steel like magnets, so it works on glass, wood and painted concrete.
+
+Two limits:
+
+- **The pad must lie flat.** The pull only acts across a gap of micrometres. A pad tilted more than a few degrees does not grip, which is why each foot has a soft ankle ([`sim/README.md`](sim/README.md)).
+- **The force is not measured yet.** The simulation assumes 15 N per pad. Rough, dusty or damp surfaces give less, and the first bench test of a real pad will give the true number.
+
 **Standing on three legs.** Every step leaves three pads holding the robot. On a vertical wall that needs 55–58 % grip instead of 41 % on four pads, and lifting an upper leg is the worst case. A force model and MuJoCo agree on these numbers ([`sim/balance.py`](sim/balance.py)).
 
 <p align="center"><img src="media/balance.png" width="820" alt="Balance on a wall: pad pressures with each leg lifted, grip needed from floor to ceiling"></p>
